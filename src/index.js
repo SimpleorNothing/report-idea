@@ -27,7 +27,6 @@ const TOPIC_GUIDE = {
 };
 
 const SOURCE_GUIDE = {
-  tools:   "사내 도구모음(기획 도구·대시보드)에서 다뤄온 주제·관점",
   mi:      "Market Insight(시장 동향·뉴스 분류 결과)의 최신 이슈",
   "2030":  "2030 미래 트렌드 보드의 8대 메가트렌드",
   reports: "기존 사내 업로드 보고서들의 주제·분석 관점",

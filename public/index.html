@@ -64,7 +64,7 @@
   }
   .page-display .unit { font-size: 12px; font-weight: 600; opacity: .75; }
 
-  /* 개요 수준 */
+  /* 처리 모드 */
   .mode-row { display: flex; gap: 8px; }
   .mode-card {
     flex: 1; padding: 10px 8px; border: none; background: #f0f0f2; border-radius: 8px;
@@ -168,9 +168,27 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace; letter-spacing: 0.2px;
     user-select: none; text-align: left;
   }
+  .test-badge {
+    max-width: 640px;
+    margin: 0 auto 16px;
+    padding: 0 4px;
+    text-align: left;
+  }
+  .test-badge span {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #1d1d1f;
+    background: #ffc107;
+    padding: 3px 10px;
+    border-radius: 10px;
+    letter-spacing: 0.6px;
+    user-select: none;
+  }
 </style>
 </head>
 <body>
+<div class="test-badge"><span>TEST VERSION</span></div>
 <div class="wrap">
   <a class="da-launcher" href="https://samsungda.net" title="도구모음 열기">
     <span class="da-gi"><i></i><i></i><i></i><i></i></span>도구모음
@@ -178,7 +196,7 @@
 
   <h1>💡 아이디어 자판기</h1>
   <p class="lead">사업부장 보고 주제, 30초 만에 뽑아냅니다.</p>
-  <p class="lead" style="margin-bottom:0;font-size:12px;color:#a1a1a6;">도구모음 · Market Insight · 2030 · 업로드 보고서를 근거로 보고 주제를 제안합니다.</p>
+  <p class="lead" style="margin-bottom:0;font-size:12px;color:#a1a1a6;">Market Insight · 2030 미래트렌드 · 업로드 보고서를 근거로 보고 주제를 제안합니다.</p>
 
   <form id="form">
     <label>① 주제 선택 <span class="sublabel">복수 선택 가능</span></label>
@@ -195,7 +213,7 @@
       <button type="button" class="page-btn" data-delta="1">+</button>
     </div>
 
-    <label>③ 개요 수준</label>
+    <label>③ 처리 모드</label>
     <div class="mode-row">
       <button type="button" class="mode-card active" data-mode="speed">
         <span class="mode-name">SPEED</span>
@@ -207,11 +225,10 @@
       </button>
     </div>
 
-    <label>④ 소스 <span class="sublabel">근거로 삼을 데이터</span></label>
+    <label>④ 소스</label>
     <div class="source-grid" id="sourceRow">
-      <button type="button" class="chip active" data-src="tools">도구모음</button>
       <button type="button" class="chip active" data-src="mi">Market Insight</button>
-      <button type="button" class="chip active" data-src="2030">2030</button>
+      <button type="button" class="chip active" data-src="2030">2030 미래트렌드</button>
       <button type="button" class="chip active" data-src="reports">업로드 보고서</button>
       <button type="button" class="chip" data-src="search">🔎 신규 검색</button>
     </div>
@@ -246,10 +263,10 @@
 
 <script>
 const TOPIC_LABEL = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
-const SRC_LABEL = { tools:"도구모음", mi:"Market Insight", "2030":"2030", reports:"업로드 보고서", search:"신규 검색" };
+const SRC_LABEL = { mi:"Market Insight", "2030":"2030 미래트렌드", reports:"업로드 보고서", search:"신규 검색" };
 
 const selectedTopics = new Set(["consumer"]);
-const selectedSources = new Set(["tools", "mi", "2030", "reports"]);
+const selectedSources = new Set(["mi", "2030", "reports"]);
 let ideaCount = 3;
 let mode = "speed";
 
