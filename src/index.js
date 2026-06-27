@@ -57,9 +57,13 @@ async function handleGenerate(request, env) {
 
   // 업로드 보고서 실데이터 주입 (R2: samsungda-research)
   let reportBlock = "";
+  let reportSources = null;
   if (useReports) {
-    try { reportBlock = await gatherReportContext(env); }
-    catch (e) { reportBlock = ""; }
+    try {
+      const rc = await gatherReportContext(env);
+      reportBlock = rc.block;
+      reportSources = { total: rc.total, catalog: rc.catalog, excerpted: rc.excerpted };
+    } catch (e) { reportBlock = ""; }
   }
 
   const detailRule = mode === "quality"
@@ -126,19 +130,21 @@ ${detailRule}`;
   if (!ideas.length) {
     return json({ error: "응답 파싱에 실패했습니다. 다시 시도해주세요.", raw: fullText.slice(0, 300) }, 502);
   }
-  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock });
+  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock, reportSources });
 }
 
 // ===== 업로드 보고서(R2) 컨텍스트 수집 =====
+// 반환: { block, total, catalog:[제목...], excerpted:[본문까지 읽은 제목...] }
 async function gatherReportContext(env, opts = {}) {
   const maxExtract  = opts.maxExtract  ?? 10;    // 본문 추출할 docx 최대 개수
   const perFileChars = opts.perFileChars ?? 2200; // 파일당 발췌 글자수
   const totalCap    = opts.totalCap    ?? 22000;  // 발췌 총량 상한
-  if (!env.RESEARCH) return "";
+  const empty = { block: "", total: 0, catalog: [], excerpted: [] };
+  if (!env.RESEARCH) return empty;
 
   let listed;
   try { listed = await env.RESEARCH.list({ include: ["customMetadata", "httpMetadata"] }); }
-  catch (e) { return ""; }
+  catch (e) { return empty; }
 
   const objs = (listed.objects || []).map(o => ({
     key: o.key,
@@ -147,13 +153,15 @@ async function gatherReportContext(env, opts = {}) {
     type:  o.httpMetadata?.contentType || "",
     uploaded: o.uploaded,
   }));
-  if (!objs.length) return "";
+  if (!objs.length) return empty;
   objs.sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
 
-  const catalog = objs.map((o, i) => `${i + 1}. ${o.title}`).join("\n");
+  const catalogTitles = objs.map(o => o.title);
+  const catalog = catalogTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
 
   const docxObjs = objs.filter(o => /\.docx$/i.test(o.name) || /wordprocessingml/i.test(o.type));
   const excerpts = [];
+  const excerptedTitles = [];
   let total = 0;
   for (const o of docxObjs) {
     if (excerpts.length >= maxExtract || total >= totalCap) break;
@@ -167,6 +175,7 @@ async function gatherReportContext(env, opts = {}) {
       if (t.length > remain) t = t.slice(0, remain) + " …";
       total += t.length;
       excerpts.push(`### ${o.title}\n${t}`);
+      excerptedTitles.push(o.title);
     } catch (e) { /* skip this file */ }
   }
 
@@ -177,7 +186,7 @@ async function gatherReportContext(env, opts = {}) {
   if (excerpts.length) {
     block += `\n\n[주요 보고서 본문 발췌]\n${excerpts.join("\n\n")}`;
   }
-  return block;
+  return { block, total: objs.length, catalog: catalogTitles, excerpted: excerptedTitles };
 }
 
 function safeDecode(s) {
