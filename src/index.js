@@ -1,7 +1,7 @@
 // src/index.js
 // 아이디어 자판기 Worker
 // - 정적 자산(public/)은 ASSETS 바인딩이 자동 서빙
-// - /api/generate : 보고 주제 생성 (Claude API, web_search 옵션)
+// - /api/generate : 보고 주제 생성 (Claude API, web_search 옵션, 업로드 보고서 R2 주입)
 // - /api/version  : 배포 시각 배지 (CF_VERSION_METADATA)
 
 export default {
@@ -29,7 +29,7 @@ const TOPIC_GUIDE = {
 const SOURCE_GUIDE = {
   mi:      "Market Insight(시장 동향·뉴스 분류 결과)의 최신 이슈",
   "2030":  "2030 미래 트렌드 보드의 8대 메가트렌드",
-  reports: "기존 사내 업로드 보고서들의 주제·분석 관점",
+  reports: "사내에 축적된 업로드 보고서(실제 목록·본문이 아래에 제공됨)",
   search:  "웹 신규 검색으로 수집한 최신 자료",
 };
 
@@ -48,11 +48,19 @@ async function handleGenerate(request, env) {
   const sources = Array.isArray(body.sources) ? body.sources : [];
   const keyword = (body.keyword || "").trim();
   const useSearch = sources.includes("search");
+  const useReports = sources.includes("reports");
 
   const topicLines  = topics.map(t => "- " + (TOPIC_GUIDE[t] || t)).join("\n");
   const sourceLines = sources.length
     ? sources.map(s => "- " + (SOURCE_GUIDE[s] || s)).join("\n")
     : "- 일반적인 가전 산업 지식";
+
+  // 업로드 보고서 실데이터 주입 (R2: samsungda-research)
+  let reportBlock = "";
+  if (useReports) {
+    try { reportBlock = await gatherReportContext(env); }
+    catch (e) { reportBlock = ""; }
+  }
 
   const detailRule = mode === "quality"
     ? `각 아이디어는 "title", "topic", "bullets"(정확히 3개), "detail"(2~3문장의 개략 내용) 필드를 가진다. detail에는 왜 지금 보고할 가치가 있는지와 핵심 논지를 담되, 강조할 핵심어는 <b>...</b> 로 1~2곳만 감싼다.`
@@ -71,6 +79,7 @@ ${detailRule}`;
   userParts.push(`다음 조건으로 보고 주제 ${count}개를 생성하라.`);
   userParts.push(`\n[주제 영역]\n${topicLines}`);
   userParts.push(`\n[근거로 우선 참고할 출처]\n${sourceLines}`);
+  if (reportBlock) userParts.push(`\n${reportBlock}`);
   if (useSearch && keyword) userParts.push(`\n[신규 검색 키워드] ${keyword} — 웹 검색으로 최신 동향을 반영하라.`);
   else if (useSearch)        userParts.push(`\n[신규 검색] 선택된 주제 영역의 최신 동향을 웹 검색으로 반영하라.`);
   userParts.push(`\n[topic 값] 각 아이디어의 "topic" 필드는 다음 중 선택한 주제에 해당하는 값만 사용: ${topics.map(t=>`"${t}"`).join(", ")}.`);
@@ -117,7 +126,111 @@ ${detailRule}`;
   if (!ideas.length) {
     return json({ error: "응답 파싱에 실패했습니다. 다시 시도해주세요.", raw: fullText.slice(0, 300) }, 502);
   }
-  return json({ ideas: ideas.slice(0, count) });
+  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock });
+}
+
+// ===== 업로드 보고서(R2) 컨텍스트 수집 =====
+async function gatherReportContext(env, opts = {}) {
+  const maxExtract  = opts.maxExtract  ?? 10;    // 본문 추출할 docx 최대 개수
+  const perFileChars = opts.perFileChars ?? 2200; // 파일당 발췌 글자수
+  const totalCap    = opts.totalCap    ?? 22000;  // 발췌 총량 상한
+  if (!env.RESEARCH) return "";
+
+  let listed;
+  try { listed = await env.RESEARCH.list({ include: ["customMetadata", "httpMetadata"] }); }
+  catch (e) { return ""; }
+
+  const objs = (listed.objects || []).map(o => ({
+    key: o.key,
+    title: o.customMetadata?.title ? safeDecode(o.customMetadata.title) : o.key,
+    name:  o.customMetadata?.name  ? safeDecode(o.customMetadata.name)  : o.key,
+    type:  o.httpMetadata?.contentType || "",
+    uploaded: o.uploaded,
+  }));
+  if (!objs.length) return "";
+  objs.sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+
+  const catalog = objs.map((o, i) => `${i + 1}. ${o.title}`).join("\n");
+
+  const docxObjs = objs.filter(o => /\.docx$/i.test(o.name) || /wordprocessingml/i.test(o.type));
+  const excerpts = [];
+  let total = 0;
+  for (const o of docxObjs) {
+    if (excerpts.length >= maxExtract || total >= totalCap) break;
+    try {
+      const obj = await env.RESEARCH.get(o.key);
+      if (!obj) continue;
+      const ab = await obj.arrayBuffer();
+      let t = await extractDocxText(ab, perFileChars);
+      if (!t) continue;
+      const remain = totalCap - total;
+      if (t.length > remain) t = t.slice(0, remain) + " …";
+      total += t.length;
+      excerpts.push(`### ${o.title}\n${t}`);
+    } catch (e) { /* skip this file */ }
+  }
+
+  let block = `[업로드 보고서 — 실제 사내 보고서]\n`
+    + `· 전체 ${objs.length}건. 아래 목록과 본문 발췌는 사내에 실제로 축적된 보고서다.\n`
+    + `· 이미 다룬 주제는 그대로 반복하지 말고, 빈틈·후속·심화·교차 주제를 우선 발굴하라.\n\n`
+    + `[보고서 목록]\n${catalog}`;
+  if (excerpts.length) {
+    block += `\n\n[주요 보고서 본문 발췌]\n${excerpts.join("\n\n")}`;
+  }
+  return block;
+}
+
+function safeDecode(s) {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+
+// ===== docx 텍스트 추출 (ZIP local header 스캔 + DecompressionStream) =====
+async function extractDocxText(arrayBuffer, maxChars = 0) {
+  const buf = new Uint8Array(arrayBuffer);
+  const dv = new DataView(arrayBuffer);
+  const dec = new TextDecoder();
+  let i = 0;
+  while (i + 30 <= buf.length) {
+    if (dv.getUint32(i, true) !== 0x04034b50) break;
+    const gpflag   = dv.getUint16(i + 6, true);
+    const method   = dv.getUint16(i + 8, true);
+    const compSize = dv.getUint32(i + 18, true);
+    const nameLen  = dv.getUint16(i + 26, true);
+    const extraLen = dv.getUint16(i + 28, true);
+    const nameStart = i + 30;
+    const name = dec.decode(buf.subarray(nameStart, nameStart + nameLen));
+    const dataStart = nameStart + nameLen + extraLen;
+    if ((gpflag & 0x08) && compSize === 0) break; // 데이터 디스크립터 → 순차 스캔 불가
+    if (name === "word/document.xml") {
+      const data = buf.subarray(dataStart, dataStart + compSize);
+      let xmlBytes;
+      if (method === 0) xmlBytes = data;
+      else if (method === 8) xmlBytes = await inflateRaw(data);
+      else return "";
+      return xmlToText(dec.decode(xmlBytes), maxChars);
+    }
+    i = dataStart + compSize;
+  }
+  return "";
+}
+
+async function inflateRaw(bytes) {
+  const ds = new DecompressionStream("deflate-raw");
+  const stream = new Response(bytes).body.pipeThrough(ds);
+  const ab = await new Response(stream).arrayBuffer();
+  return new Uint8Array(ab);
+}
+
+function xmlToText(xml, maxChars) {
+  let t = xml
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<w:tab\b[^>]*\/>/g, "\t")
+    .replace(/<[^>]+>/g, "");
+  t = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+       .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+  t = t.replace(/\n{3,}/g, "\n\n").replace(/[ \t]+\n/g, "\n").trim();
+  if (maxChars && t.length > maxChars) t = t.slice(0, maxChars) + " …(이하 생략)";
+  return t;
 }
 
 function parseIdeas(textOut, topics, mode) {
