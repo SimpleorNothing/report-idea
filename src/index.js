@@ -33,6 +33,12 @@ const SOURCE_GUIDE = {
   search:  "웹 신규 검색으로 수집한 최신 자료",
 };
 
+// 아이디어 방향 — 매출 확대(sales) / 수익성 강화(profit)
+const DIRECTION_GUIDE = {
+  sales:  `매출 확대 — 톱라인(매출) 성장 관점. 신사업 진출, 신규 제품·카테고리, 새로운 비즈니스 모델(구독·서비스·플랫폼·솔루션), 신규 고객층·신시장·신채널 발굴 등 "새로운 매출원"을 만드는 보고 주제만 도출한다. 단순 원가절감·운영효율 주제는 배제한다.`,
+  profit: `수익성 강화 — 보텀라인(이익) 개선 관점. 운영효율 증대, 원가구조 개선, 생산성·SCM·물류 최적화, 프로세스 자동화, 품질비용(COPQ) 절감, 제품·채널 믹스 개선 등 "이익률을 끌어올리는" 보고 주제만 도출한다. 신규 매출 창출 주제는 배제한다.`,
+};
+
 async function handleGenerate(request, env) {
   if (!env.ANTHROPIC_API_KEY) {
     return json({ error: "ANTHROPIC_API_KEY 가 설정되지 않았습니다 (Worker Settings → Variables and Secrets)." }, 500);
@@ -44,7 +50,7 @@ async function handleGenerate(request, env) {
 
   const topics  = Array.isArray(body.topics) && body.topics.length ? body.topics : ["consumer"];
   const count   = Math.max(1, Math.min(8, parseInt(body.count) || 3));
-  const mode    = body.mode === "quality" ? "quality" : "speed";
+  const direction = body.direction === "profit" ? "profit" : "sales";
   const sources = Array.isArray(body.sources) ? body.sources : [];
   const keyword = (body.keyword || "").trim();
   const useSearch = sources.includes("search");
@@ -66,9 +72,7 @@ async function handleGenerate(request, env) {
     } catch (e) { reportBlock = ""; }
   }
 
-  const detailRule = mode === "quality"
-    ? `각 아이디어는 "title", "topic", "bullets"(정확히 3개), "detail"(2~3문장의 개략 내용) 필드를 가진다. detail에는 왜 지금 보고할 가치가 있는지와 핵심 논지를 담되, 강조할 핵심어는 <b>...</b> 로 1~2곳만 감싼다.`
-    : `각 아이디어는 "title", "topic", "bullets"(정확히 3개) 필드를 가진다. detail 필드는 빈 문자열("")로 둔다.`;
+  const detailRule = `각 아이디어는 "title", "topic", "bullets"(정확히 3개), "detail"(2~3문장의 개략 내용) 필드를 가진다. detail에는 왜 지금 보고할 가치가 있는지와 핵심 논지를 담되, 강조할 핵심어는 <b>...</b> 로 1~2곳만 감싼다.`;
 
   const system = `너는 삼성 생활가전(DA) 사업부의 시니어 기획 담당이다. 사업부장에게 보고할 "보고서 주제"를 발굴한다.
 - 산출물은 완성된 보고서가 아니라, 보고할 가치가 있는 "주제(아이디어)"의 개요다.
@@ -76,11 +80,13 @@ async function handleGenerate(request, env) {
 - bullets 3개는 (1) 시장/현상 근거, (2) 시사점/기회, (3) "보고 포인트 : ..." 형식의 보고 방향, 순서를 권장한다.
 - 각 bullet은 1~2줄(한국어 약 40~75자)로 간결하게 압축한다. 한 문장 원칙, 군더더기·중복 설명 금지.
 - 추측성 수치는 단정하지 말고 방향성 위주로 쓴다.
+- 모든 아이디어는 아래 지정된 "아이디어 방향"에 부합해야 한다. 방향과 어긋나는 주제는 절대 포함하지 않는다.
 - 한국어로 작성한다.
 ${detailRule}`;
 
   const userParts = [];
   userParts.push(`다음 조건으로 보고 주제 ${count}개를 생성하라.`);
+  userParts.push(`\n[아이디어 방향 — 최우선 기준]\n- ${DIRECTION_GUIDE[direction]}`);
   userParts.push(`\n[주제 영역]\n${topicLines}`);
   userParts.push(`\n[근거로 우선 참고할 출처]\n${sourceLines}`);
   if (reportBlock) userParts.push(`\n${reportBlock}`);
@@ -126,7 +132,7 @@ ${detailRule}`;
     .join("\n")
     .trim();
 
-  const ideas = parseIdeas(fullText, topics, mode);
+  const ideas = parseIdeas(fullText, topics);
   if (!ideas.length) {
     return json({ error: "응답 파싱에 실패했습니다. 다시 시도해주세요.", raw: fullText.slice(0, 300) }, 502);
   }
@@ -242,7 +248,7 @@ function xmlToText(xml, maxChars) {
   return t;
 }
 
-function parseIdeas(textOut, topics, mode) {
+function parseIdeas(textOut, topics) {
   let clean = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
   const s = clean.indexOf("[");
   const e = clean.lastIndexOf("]");
@@ -259,7 +265,7 @@ function parseIdeas(textOut, topics, mode) {
       title: String(it.title || "").trim(),
       topic,
       bullets,
-      detail: mode === "quality" ? String(it.detail || "").trim() : "",
+      detail: String(it.detail || "").trim(),
     };
   }).filter(it => it.title && it.bullets.length);
 }
