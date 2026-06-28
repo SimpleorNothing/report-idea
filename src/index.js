@@ -282,14 +282,21 @@ async function gatherMarketInsight(topics, opts = {}) {
   const wantLens = new Set((topics || []).map(t => LENS_MAP[t]).filter(Boolean));
   if (!wantLens.size) return empty;
 
-  let data;
-  try {
-    const res = await fetch("https://mi.samsungda.net/data/news.json", {
-      cf: { cacheTtl: 600, cacheEverything: true },
-    });
-    if (!res.ok) return empty;
-    data = await res.json();
-  } catch (e) { return empty; }
+  // mi.samsungda.net 우선, 실패 시 raw.githubusercontent 폴백
+  let data = null;
+  const urls = [
+    "https://mi.samsungda.net/data/news.json",
+    "https://raw.githubusercontent.com/SimpleorNothing/market-insight/main/data/news.json",
+  ];
+  for (const u of urls) {
+    try {
+      const res = await fetch(u, { cf: { cacheTtl: 600, cacheEverything: true } });
+      if (!res.ok) continue;
+      data = await res.json();
+      if (data) break;
+    } catch (e) { /* 다음 URL 시도 */ }
+  }
+  if (!data) return empty;
 
   const items = Array.isArray(data.items) ? data.items : [];
   const byLens = {};
