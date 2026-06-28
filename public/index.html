@@ -345,7 +345,7 @@ const selectedTopics = new Set(["consumer", "tech", "rival"]);
 const selectedSources = new Set(["mi", "2030", "reports"]);
 let ideaCount = 3;
 let direction = "sales";
-let lastSources = { reportSources: null, searchSources: [] };
+let lastSources = { reportSources: null, searchSources: [], miSources: [], trendSources: [] };
 
 document.querySelectorAll("#topicRow .chip").forEach(chip => {
   chip.addEventListener("click", () => {
@@ -482,7 +482,7 @@ form.addEventListener("submit", async (e) => {
     if (!ideas.length) throw new Error("생성된 아이디어가 없습니다. 다시 시도해주세요.");
 
     clearInterval(tick);
-    lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [] };
+    lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [], miSources: data.miSources || [], trendSources: data.trendSources || [] };
     render(ideas);
     renderReportNote(data.reportSources, selectedSources.has("reports"));
     status.className = "status success";
@@ -557,11 +557,22 @@ function openSourceModal(src) {
       html = `<p class="srcmodal-empty">참고한 업로드 보고서 정보가 없습니다.</p>`;
     }
   } else if (src === "mi") {
-    html = `<p class="srcmodal-empty">Market Insight 보드에서 수집·분류된 최신 시장 신호를 근거 맥락으로 활용했습니다. 개별 기사 목록은 보드에서 확인하세요.</p>`
-      + `<a class="srcmodal-link" href="https://mi.samsungda.net" target="_blank" rel="noopener">→ Market Insight 보드 열기</a>`;
+    const list = lastSources.miSources || [];
+    const boardLink = `<a class="srcmodal-link" href="https://mi.samsungda.net" target="_blank" rel="noopener">→ Market Insight 보드 열기</a>`;
+    html = (list.length
+      ? `<ul class="srcmodal-list">` + list.map(s => {
+          const tag = [s.lens, s.grade].filter(Boolean).join("·");
+          return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
+            + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
+        }).join("") + `</ul>`
+      : `<p class="srcmodal-empty">이번 생성에서 참고한 Market Insight 신호가 없습니다.</p>`) + boardLink;
   } else if (src === "2030") {
-    html = `<p class="srcmodal-empty">2030 미래 트렌드 보드의 메가트렌드를 근거 맥락으로 활용했습니다. 상세 근거는 보드에서 확인하세요.</p>`
-      + `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 트렌드 보드 열기</a>`;
+    const list = lastSources.trendSources || [];
+    const boardLink = `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 트렌드 보드 열기</a>`;
+    html = (list.length
+      ? `<p class="srcmodal-empty">2030 보드의 8대 메가트렌드 골격을 근거 맥락으로 활용했습니다(개별 기사 아님).</p>`
+        + `<ul class="srcmodal-list">` + list.map(s => `<li>${esc(s.title)}</li>`).join("") + `</ul>`
+      : `<p class="srcmodal-empty">2030 미래 트렌드 보드의 메가트렌드를 근거 맥락으로 활용했습니다.</p>`) + boardLink;
   } else {
     html = `<p class="srcmodal-empty">참고 자료 정보가 없습니다.</p>`;
   }

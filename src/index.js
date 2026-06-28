@@ -55,6 +55,8 @@ async function handleGenerate(request, env) {
   const keyword = (body.keyword || "").trim();
   const useSearch = sources.includes("search");
   const useReports = sources.includes("reports");
+  const useMi = sources.includes("mi");
+  const use2030 = sources.includes("2030");
 
   const topicLines  = topics.map(t => "- " + (TOPIC_GUIDE[t] || t)).join("\n");
   const sourceLines = sources.length
@@ -71,6 +73,17 @@ async function handleGenerate(request, env) {
       reportSources = { total: rc.total, catalog: rc.catalog, excerpted: rc.excerpted };
     } catch (e) { reportBlock = ""; }
   }
+
+  // Market Insight 실데이터 주입 (mi.samsungda.net/data/news.json)
+  let miBlock = "", miSources = [];
+  if (useMi) {
+    try { const r = await gatherMarketInsight(topics); miBlock = r.block; miSources = r.sources; }
+    catch (e) { miBlock = ""; }
+  }
+
+  // 2030 미래 트렌드 골격 주입 (8대 메가트렌드)
+  let trendBlock = "", trendSources = [];
+  if (use2030) { const r = gather2030(); trendBlock = r.block; trendSources = r.sources; }
 
   const detailRule = `각 아이디어는 "title", "topic", "content", "opportunity", "threat", "angle" 6개 필드를 가진다.
 - content : 주제의 핵심 내용을 1~2줄(한국어 약 50~90자)로 압축. 시장·현상 근거 중심으로 무엇에 관한 주제인지 설명한다.
@@ -95,6 +108,8 @@ ${detailRule}`;
   userParts.push(`\n[아이디어 방향 — 최우선 기준]\n- ${DIRECTION_GUIDE[direction]}`);
   userParts.push(`\n[주제 영역]\n${topicLines}`);
   userParts.push(`\n[근거로 우선 참고할 출처]\n${sourceLines}`);
+  if (miBlock) userParts.push(`\n${miBlock}`);
+  if (trendBlock) userParts.push(`\n${trendBlock}`);
   if (reportBlock) userParts.push(`\n${reportBlock}`);
   if (useSearch && keyword) userParts.push(`\n[신규 검색 키워드] ${keyword} — 웹 검색으로 최신 동향을 반영하라.`);
   else if (useSearch)        userParts.push(`\n[신규 검색] 선택된 주제 영역의 최신 동향을 웹 검색으로 반영하라.`);
@@ -143,7 +158,7 @@ ${detailRule}`;
     return json({ error: "응답 파싱에 실패했습니다. 다시 시도해주세요.", raw: fullText.slice(0, 300) }, 502);
   }
   const searchSources = useSearch ? collectSearchSources(data.content) : [];
-  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock, reportSources, searchSources });
+  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock, reportSources, searchSources, miSources, trendSources });
 }
 
 // ===== 업로드 보고서(R2) 컨텍스트 수집 =====
@@ -253,6 +268,83 @@ function xmlToText(xml, maxChars) {
   t = t.replace(/\n{3,}/g, "\n\n").replace(/[ \t]+\n/g, "\n").trim();
   if (maxChars && t.length > maxChars) t = t.slice(0, maxChars) + " …(이하 생략)";
   return t;
+}
+
+// ===== Market Insight 실데이터 (news.json) =====
+// topic(consumer/tech/rival) → lens(소비자/기술/경쟁사) 매핑
+const LENS_MAP = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
+const GRADE_RANK = { "긴급": 4, "주요": 3, "주시": 2, "참고": 1 };
+
+async function gatherMarketInsight(topics, opts = {}) {
+  const perLens = opts.perLens ?? 6;   // 렌즈별 최대 항목
+  const cap     = opts.cap ?? 18;      // 총 상한
+  const empty = { block: "", sources: [] };
+  const wantLens = new Set((topics || []).map(t => LENS_MAP[t]).filter(Boolean));
+  if (!wantLens.size) return empty;
+
+  let data;
+  try {
+    const res = await fetch("https://mi.samsungda.net/data/news.json", {
+      cf: { cacheTtl: 600, cacheEverything: true },
+    });
+    if (!res.ok) return empty;
+    data = await res.json();
+  } catch (e) { return empty; }
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  const byLens = {};
+  for (const it of items) {
+    if (it && wantLens.has(it.lens)) (byLens[it.lens] = byLens[it.lens] || []).push(it);
+  }
+  const picked = [];
+  for (const lens of wantLens) {
+    const arr = (byLens[lens] || []).slice().sort((a, b) => {
+      const gr = (GRADE_RANK[b.grade] || 0) - (GRADE_RANK[a.grade] || 0);
+      if (gr) return gr;
+      const im = (b.impact || 0) - (a.impact || 0);
+      if (im) return im;
+      return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+    }).slice(0, perLens);
+    picked.push(...arr);
+  }
+  if (!picked.length) return empty;
+
+  const top = picked.slice(0, cap);
+  const sources = top.map(it => ({
+    title: it.headline || "",
+    url: it.url || "",
+    lens: it.lens || "",
+    grade: it.grade || "",
+  })).filter(s => s.title);
+
+  const lines = top.map(it =>
+    `- [${it.lens}·${it.grade}] ${it.headline}` + (it.summary ? ` — ${String(it.summary).slice(0, 90)}` : "")
+  ).join("\n");
+  const block = `[Market Insight — 실시간 수집·분류된 시장 신호]\n`
+    + `· mi.samsungda.net 파이프라인이 분류한 실데이터다. 렌즈(소비자/기술/경쟁사)·등급(긴급>주요>주시>참고) 기준 상위 항목.\n`
+    + `· 아래 신호를 근거로 보고 주제를 도출하라.\n\n${lines}`;
+  return { block, sources };
+}
+
+// ===== 2030 미래 트렌드 골격 (8대 메가트렌드) =====
+const MEGATRENDS_2030 = [
+  "T1 AI 에이전트 가전",
+  "T2 데이터센터 냉각·열관리",
+  "T3 저GWP·자연냉매 전환",
+  "T4 히트펌프 전기화",
+  "T5 가전 구독·XaaS(서비스화)",
+  "T6 순환경제·수리권",
+  "T7 VPP·그리드 연계",
+  "T8 실버·헬스케어 가전",
+];
+
+function gather2030() {
+  const lines = MEGATRENDS_2030.map(t => "- " + t).join("\n");
+  const block = `[2030 미래 트렌드 — DA 8대 메가트렌드 골격]\n`
+    + `· 2030.samsungda.net 보드가 추적하는 8대 메가트렌드다(트렌드 프레임 단위, 개별 기사 아님).\n`
+    + `· 이 메가트렌드 흐름과 연결해 중장기 보고 주제를 도출하라.\n\n${lines}`;
+  const sources = MEGATRENDS_2030.map(t => ({ title: t }));
+  return { block, sources };
 }
 
 // ===== web_search 인용 출처 수집 =====
