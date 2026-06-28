@@ -156,16 +156,31 @@
     display: inline-block; font-size: 11px; font-weight: 700; color: #6e6e73; background: #f0f0f2;
     border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; letter-spacing: .2px;
   }
-  .idea-bullets { margin: 12px 0 0; padding-left: 0; list-style: none; }
-  .idea-bullets li {
-    position: relative; padding-left: 18px; font-size: 13.5px; color: #3a3a3c; line-height: 1.6; margin-bottom: 5px;
+  /* 4필드 — 내용 / 당사 기회 / 당사 위협 / 보고서 방향 */
+  .idea-content { margin-top: 12px; }
+  .idea-content .fl, .idea-ot .fl, .idea-angle .fl {
+    font-size: 11px; font-weight: 800; letter-spacing: .3px; margin-bottom: 4px;
   }
-  .idea-bullets li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: #0071e3; }
-  .idea-detail {
-    margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e2e7;
-    font-size: 13px; color: #515154; line-height: 1.65;
+  .idea-content .fl { color: #86868b; }
+  .idea-content .ft { font-size: 13.5px; color: #3a3a3c; line-height: 1.6; }
+  .idea-content .ft b, .idea-ot .ft b { color: #1d1d1f; font-weight: 700; }
+
+  .idea-ot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .idea-ot .otbox { border-radius: 10px; padding: 10px 12px; }
+  .idea-ot .otbox .ft { font-size: 13px; line-height: 1.55; }
+  .idea-ot .opp { background: #effaf3; border: 1px solid #cdeed9; }
+  .idea-ot .opp .fl { color: #1a7a42; }
+  .idea-ot .thr { background: #fff1f1; border: 1px solid #f6d6d6; }
+  .idea-ot .thr .fl { color: #b02a2a; }
+  @media (max-width: 520px) { .idea-ot { grid-template-columns: 1fr; } }
+
+  .idea-angle {
+    margin-top: 12px; background: #eef5ff; border: 1px solid #d6e6fb;
+    border-left: 3px solid #0071e3; border-radius: 10px; padding: 11px 13px;
   }
-  .idea-detail b { color: #1d1d1f; font-weight: 600; }
+  .idea-angle .fl { color: #0071e3; }
+  .idea-angle .ft { font-size: 13px; color: #2b3a4d; line-height: 1.6; }
+  .idea-angle .ft b { color: #003c80; font-weight: 700; }
   .src-foot { margin-top: 12px; font-size: 11px; color: #a1a1a6; }
   .src-foot .pill { display:inline-block; background:#f5f5f7; border-radius:5px; padding:1px 7px; margin-right:4px; }
 
@@ -357,9 +372,13 @@ function render(ideas) {
   resultsBody.innerHTML = "";
   ideas.forEach((idea, n) => {
     const topic = TOPIC_LABEL[idea.topic] ? idea.topic : [...selectedTopics][0];
-    const bullets = (idea.bullets || []).map(b => `<li>${inline(b)}</li>`).join("");
-    const detail = idea.detail
-      ? `<div class="idea-detail"><b>개략 내용 ·</b> ${inline(idea.detail)}</div>` : "";
+    const otRow = (idea.opportunity || idea.threat)
+      ? `<div class="idea-ot">
+          <div class="otbox opp"><div class="fl">당사 기회</div><div class="ft">${inline(idea.opportunity)}</div></div>
+          <div class="otbox thr"><div class="fl">당사 위협</div><div class="ft">${inline(idea.threat)}</div></div>
+        </div>` : "";
+    const angle = idea.angle
+      ? `<div class="idea-angle"><div class="fl">보고서 방향</div><div class="ft">${inline(idea.angle)}</div></div>` : "";
     const card = document.createElement("div");
     card.className = "idea-card";
     card.style.animationDelay = (n * 0.07) + "s";
@@ -371,8 +390,9 @@ function render(ideas) {
           <span class="idea-tag">${TOPIC_LABEL[topic]}</span>
         </div>
       </div>
-      <ul class="idea-bullets">${bullets}</ul>
-      ${detail}
+      <div class="idea-content"><div class="fl">내용</div><div class="ft">${inline(idea.content)}</div></div>
+      ${otRow}
+      ${angle}
       <div class="src-foot">근거 : ${srcPills()}</div>`;
     resultsBody.appendChild(card);
   });
@@ -432,10 +452,15 @@ form.addEventListener("submit", async (e) => {
 
 document.getElementById("copyAll").addEventListener("click", () => {
   const text = [...resultsBody.querySelectorAll(".idea-card")].map((c, i) => {
-    const title = c.querySelector(".idea-title").textContent;
-    const bl = [...c.querySelectorAll(".idea-bullets li")].map(li => "  - " + li.textContent).join("\n");
-    const det = c.querySelector(".idea-detail");
-    return `${i+1}. ${title}\n${bl}${det ? "\n  " + det.textContent : ""}`;
+    const title = c.querySelector(".idea-title").textContent.trim();
+    const tag = c.querySelector(".idea-tag").textContent.trim();
+    const pick = sel => { const el = c.querySelector(sel); return el ? el.textContent.trim() : ""; };
+    let out = `${i + 1}. [${tag}] ${title}`;
+    out += `\n  - 내용 : ${pick(".idea-content .ft")}`;
+    const opp = pick(".otbox.opp .ft"); if (opp) out += `\n  - 당사 기회 : ${opp}`;
+    const thr = pick(".otbox.thr .ft"); if (thr) out += `\n  - 당사 위협 : ${thr}`;
+    const ang = pick(".idea-angle .ft"); if (ang) out += `\n  - 보고서 방향 : ${ang}`;
+    return out;
   }).join("\n\n");
   navigator.clipboard.writeText(text).then(() => {
     const b = document.getElementById("copyAll");
