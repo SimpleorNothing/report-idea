@@ -213,14 +213,7 @@
   <p class="lead" style="margin-bottom:0;font-size:12px;color:#a1a1a6;">Market Insight · 2030 미래트렌드 · 업로드 보고서를 근거로 보고 주제를 제안합니다.</p>
 
   <form id="form">
-    <label>① 주제 선택 <span class="sublabel">복수 선택 가능</span></label>
-    <div class="chip-row" id="topicRow">
-      <button type="button" class="chip active" data-topic="consumer"><span class="em">🧑‍🤝‍🧑</span>소비자</button>
-      <button type="button" class="chip" data-topic="tech"><span class="em">⚙️</span>기술</button>
-      <button type="button" class="chip" data-topic="rival"><span class="em">🎯</span>경쟁사</button>
-    </div>
-
-    <label>② 아이디어 방향</label>
+    <label>① 아이디어 방향</label>
     <div class="mode-row">
       <button type="button" class="mode-card active" data-dir="sales">
         <span class="mode-name">매출 확대</span>
@@ -232,14 +225,14 @@
       </button>
     </div>
 
-    <label>③ 아이디어 갯수</label>
-    <div class="page-row">
-      <button type="button" class="page-btn" data-delta="-1">−</button>
-      <div class="page-display"><span id="countDisplay">3</span><span class="unit">개</span></div>
-      <button type="button" class="page-btn" data-delta="1">+</button>
+    <label>② 주제 선택 <span class="sublabel">복수 선택 가능</span></label>
+    <div class="chip-row" id="topicRow">
+      <button type="button" class="chip active" data-topic="consumer"><span class="em">🧑‍🤝‍🧑</span>소비자</button>
+      <button type="button" class="chip active" data-topic="tech"><span class="em">⚙️</span>기술</button>
+      <button type="button" class="chip active" data-topic="rival"><span class="em">🎯</span>경쟁사</button>
     </div>
 
-    <label>④ 소스 <span class="sublabel">복수 선택 가능</span></label>
+    <label>③ 소스 <span class="sublabel">복수 선택 가능</span></label>
     <div class="source-grid" id="sourceRow">
       <button type="button" class="chip active" data-src="mi">Market Insight</button>
       <button type="button" class="chip active" data-src="2030">2030 미래트렌드</button>
@@ -249,6 +242,13 @@
     <div class="search-input-wrap" id="searchWrap">
       <input type="text" id="searchKeyword" placeholder="검색 키워드 (예 : 북미 빌트인 냉장고 트렌드)">
       <div class="hint">선택 시 웹에서 최신 자료를 추가로 수집해 근거에 반영합니다.</div>
+    </div>
+
+    <label>④ 아이디어 갯수</label>
+    <div class="page-row">
+      <button type="button" class="page-btn" data-delta="-1">−</button>
+      <div class="page-display"><span id="countDisplay">3</span><span class="unit">개</span></div>
+      <button type="button" class="page-btn" data-delta="1">+</button>
     </div>
 
     <button type="submit" id="submit-btn" class="submit-btn">아이디어 생성</button>
@@ -281,7 +281,7 @@ const TOPIC_LABEL = { consumer: "소비자", tech: "기술", rival: "경쟁사" 
 const SRC_LABEL = { mi:"Market Insight", "2030":"2030 미래트렌드", reports:"업로드 보고서", search:"신규 검색" };
 const DIR_LABEL = { sales: "매출 확대", profit: "수익성 강화" };
 
-const selectedTopics = new Set(["consumer"]);
+const selectedTopics = new Set(["consumer", "tech", "rival"]);
 const selectedSources = new Set(["mi", "2030", "reports"]);
 let ideaCount = 3;
 let direction = "sales";
