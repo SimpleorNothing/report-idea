@@ -181,6 +181,27 @@
   .idea-angle .fl { color: #0071e3; }
   .idea-angle .ft { font-size: 13px; color: #2b3a4d; line-height: 1.6; }
   .idea-angle .ft b { color: #003c80; font-weight: 700; }
+
+  /* bullet 리스트 — 내용/기회/위협/방향 공통 (1~3개) */
+  ul.bl { margin: 4px 0 0; padding: 0; list-style: none; }
+  ul.bl li { position: relative; padding-left: 13px; line-height: 1.55; margin-bottom: 5px; }
+  ul.bl li:last-child { margin-bottom: 0; }
+  ul.bl li::before { content: ""; position: absolute; left: 1px; top: 8px; width: 5px; height: 5px; border-radius: 50%; }
+  ul.bl li b { font-weight: 700; }
+  .idea-content ul.bl { font-size: 13.5px; color: #3a3a3c; }
+  .idea-content ul.bl li::before { background: #86868b; }
+  .idea-content ul.bl li b { color: #1d1d1f; }
+  .idea-ot .otbox ul.bl { font-size: 13px; }
+  .idea-ot .opp ul.bl { color: #2a5e3e; }
+  .idea-ot .opp ul.bl li::before { background: #1a7a42; }
+  .idea-ot .opp ul.bl li b { color: #1a7a42; }
+  .idea-ot .thr ul.bl { color: #7a3636; }
+  .idea-ot .thr ul.bl li::before { background: #b02a2a; }
+  .idea-ot .thr ul.bl li b { color: #b02a2a; }
+  .idea-angle ul.bl { font-size: 13px; color: #2b3a4d; }
+  .idea-angle ul.bl li::before { background: #0071e3; }
+  .idea-angle ul.bl li b { color: #003c80; }
+
   .src-foot { margin-top: 12px; font-size: 11px; color: #a1a1a6; }
   .src-foot .pill { display:inline-block; background:#f5f5f7; border-radius:5px; padding:1px 7px; margin-right:4px; }
 
@@ -395,6 +416,12 @@ function esc(str){ return String(str==null?"":str).replace(/[&<>]/g, c => ({"&":
 function inline(str){ // <b>만 허용
   return esc(str).replace(/&lt;b&gt;/g,"<b>").replace(/&lt;\/b&gt;/g,"</b>");
 }
+function toArr(v){ return Array.isArray(v) ? v : (v == null || v === "" ? [] : [v]); }
+function bullets(v){
+  const arr = toArr(v).map(s => String(s == null ? "" : s).trim()).filter(Boolean).slice(0, 3);
+  if (!arr.length) return "";
+  return `<ul class="bl">` + arr.map(s => `<li>${inline(s)}</li>`).join("") + `</ul>`;
+}
 
 function renderReportNote(rs, reportsSelected) {
   if (!reportsSelected) { reportNote.innerHTML = ""; return; }
@@ -419,13 +446,13 @@ function render(ideas) {
   resultsBody.innerHTML = "";
   ideas.forEach((idea, n) => {
     const topic = TOPIC_LABEL[idea.topic] ? idea.topic : [...selectedTopics][0];
-    const otRow = (idea.opportunity || idea.threat)
+    const otRow = (toArr(idea.opportunity).length || toArr(idea.threat).length)
       ? `<div class="idea-ot">
-          <div class="otbox opp"><div class="fl">당사 기회</div><div class="ft">${inline(idea.opportunity)}</div></div>
-          <div class="otbox thr"><div class="fl">당사 위협</div><div class="ft">${inline(idea.threat)}</div></div>
+          <div class="otbox opp"><div class="fl">당사 기회</div>${bullets(idea.opportunity)}</div>
+          <div class="otbox thr"><div class="fl">당사 위협</div>${bullets(idea.threat)}</div>
         </div>` : "";
-    const angle = idea.angle
-      ? `<div class="idea-angle"><div class="fl">보고서 방향</div><div class="ft">${inline(idea.angle)}</div></div>` : "";
+    const angle = toArr(idea.angle).length
+      ? `<div class="idea-angle"><div class="fl">보고서 방향</div>${bullets(idea.angle)}</div>` : "";
     const card = document.createElement("div");
     card.className = "idea-card";
     card.style.animationDelay = (n * 0.07) + "s";
@@ -437,7 +464,7 @@ function render(ideas) {
           <span class="idea-tag">${TOPIC_LABEL[topic]}</span>
         </div>
       </div>
-      <div class="idea-content"><div class="fl">내용</div><div class="ft">${inline(idea.content)}</div></div>
+      <div class="idea-content"><div class="fl">내용</div>${bullets(idea.content)}</div>
       ${otRow}
       ${angle}
       <div class="src-foot">근거 : ${srcPills()}</div>`;
@@ -502,12 +529,13 @@ document.getElementById("copyAll").addEventListener("click", () => {
   const text = [...resultsBody.querySelectorAll(".idea-card")].map((c, i) => {
     const title = c.querySelector(".idea-title").textContent.trim();
     const tag = c.querySelector(".idea-tag").textContent.trim();
-    const pick = sel => { const el = c.querySelector(sel); return el ? el.textContent.trim() : ""; };
+    const lines = sel => [...c.querySelectorAll(sel + " ul.bl li")].map(li => li.textContent.trim()).filter(Boolean);
+    const sect = (label, arr) => arr.length ? `\n  [${label}]\n` + arr.map(s => `   - ${s}`).join("\n") : "";
     let out = `${i + 1}. [${tag}] ${title}`;
-    out += `\n  - 내용 : ${pick(".idea-content .ft")}`;
-    const opp = pick(".otbox.opp .ft"); if (opp) out += `\n  - 당사 기회 : ${opp}`;
-    const thr = pick(".otbox.thr .ft"); if (thr) out += `\n  - 당사 위협 : ${thr}`;
-    const ang = pick(".idea-angle .ft"); if (ang) out += `\n  - 보고서 방향 : ${ang}`;
+    out += sect("내용", lines(".idea-content"));
+    out += sect("당사 기회", lines(".otbox.opp"));
+    out += sect("당사 위협", lines(".otbox.thr"));
+    out += sect("보고서 방향", lines(".idea-angle"));
     return out;
   }).join("\n\n");
   navigator.clipboard.writeText(text).then(() => {
