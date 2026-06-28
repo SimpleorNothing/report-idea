@@ -72,13 +72,19 @@ async function handleGenerate(request, env) {
     } catch (e) { reportBlock = ""; }
   }
 
-  const detailRule = `각 아이디어는 "title", "topic", "bullets"(정확히 3개), "detail"(2~3문장의 개략 내용) 필드를 가진다. detail에는 왜 지금 보고할 가치가 있는지와 핵심 논지를 담되, 강조할 핵심어는 <b>...</b> 로 1~2곳만 감싼다.`;
+  const detailRule = `각 아이디어는 "title", "topic", "content", "opportunity", "threat", "angle" 6개 필드를 가진다.
+- content : 주제의 핵심 내용을 1~2줄(한국어 약 50~90자)로 압축. 시장·현상 근거 중심으로 무엇에 관한 주제인지 설명한다.
+- opportunity : 이 주제에서 당사가 잡을 수 있는 "기회"를 1~2줄로.
+- threat : 이 주제가 당사에 주는 "위협·리스크"를 1~2줄로.
+- angle : "보고서 방향" — (1) 왜 바로 지금 이 주제를 보고해야 하는지(타이밍·분기점)와 (2) 사업부에 어떤 메시지·의사결정을 줄 수 있는지를 2~3문장으로 쓴다.
+각 필드에서 강조할 핵심어는 <b>...</b> 로 1~2곳만 감싼다.`;
 
   const system = `너는 삼성 생활가전(DA) 사업부의 시니어 기획 담당이다. 사업부장에게 보고할 "보고서 주제"를 발굴한다.
 - 산출물은 완성된 보고서가 아니라, 보고할 가치가 있는 "주제(아이디어)"의 개요다.
 - 각 아이디어의 제목은 한 줄로 구체적이고 보고서 제목처럼 쓴다.
-- bullets 3개는 (1) 시장/현상 근거, (2) 시사점/기회, (3) "보고 포인트 : ..." 형식의 보고 방향, 순서를 권장한다.
-- 각 bullet은 1~2줄(한국어 약 40~75자)로 간결하게 압축한다. 한 문장 원칙, 군더더기·중복 설명 금지.
+- 각 아이디어는 "내용 · 당사 기회 · 당사 위협 · 보고서 방향" 네 관점으로 구성한다.
+- 내용·기회·위협은 각각 1~2줄(한 문장 원칙, 군더더기·중복 금지)로, 보고서 방향은 2~3문장으로 쓴다.
+- 기회와 위협은 막연한 일반론이 아니라 "당사(삼성 DA)" 입장에서 구체적으로 쓴다.
 - 추측성 수치는 단정하지 말고 방향성 위주로 쓴다.
 - 모든 아이디어는 아래 지정된 "아이디어 방향"에 부합해야 한다. 방향과 어긋나는 주제는 절대 포함하지 않는다.
 - 한국어로 작성한다.
@@ -97,7 +103,7 @@ ${detailRule}`;
 
   const reqBody = {
     model: "claude-sonnet-4-6",
-    max_tokens: 3000,
+    max_tokens: 4096,
     system,
     messages: [{ role: "user", content: userParts.join("\n") }],
   };
@@ -258,16 +264,16 @@ function parseIdeas(textOut, topics) {
   if (!Array.isArray(arr)) return [];
 
   return arr.map(it => {
-    let bullets = Array.isArray(it.bullets) ? it.bullets.map(x => String(x)).filter(Boolean) : [];
-    bullets = bullets.slice(0, 3);
     const topic = topics.includes(it.topic) ? it.topic : topics[0];
     return {
       title: String(it.title || "").trim(),
       topic,
-      bullets,
-      detail: String(it.detail || "").trim(),
+      content: String(it.content || "").trim(),
+      opportunity: String(it.opportunity || "").trim(),
+      threat: String(it.threat || "").trim(),
+      angle: String(it.angle || "").trim(),
     };
-  }).filter(it => it.title && it.bullets.length);
+  }).filter(it => it.title && it.content);
 }
 
 function handleVersion(env) {
