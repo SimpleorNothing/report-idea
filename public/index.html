@@ -184,14 +184,53 @@
   .src-foot { margin-top: 12px; font-size: 11px; color: #a1a1a6; }
   .src-foot .pill { display:inline-block; background:#f5f5f7; border-radius:5px; padding:1px 7px; margin-right:4px; }
 
+  /* 근거 출처 모달 */
+  .src-pill { cursor: pointer; transition: all .12s; }
+  .src-pill:hover { background: #e7f0ff; color: #0071e3; }
+  .srcmodal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.32); display: none;
+    align-items: center; justify-content: center; padding: 20px; z-index: 200;
+  }
+  .srcmodal-overlay.show { display: flex; }
+  .srcmodal {
+    background: #fff; border-radius: 16px; max-width: 440px; width: 100%;
+    max-height: 78vh; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,.22);
+  }
+  .srcmodal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid #e8e8ed; font-size: 14px; font-weight: 700; color: #1d1d1f;
+  }
+  .srcmodal-close {
+    border: none; background: #f0f0f2; color: #6e6e73; width: 26px; height: 26px;
+    border-radius: 7px; font-size: 17px; line-height: 1; cursor: pointer;
+  }
+  .srcmodal-close:hover { background: #e8e8ed; color: #1d1d1f; }
+  .srcmodal-body { padding: 16px 18px; overflow-y: auto; font-size: 13px; color: #3a3a3c; line-height: 1.6; }
+  .srcmodal-list { margin: 0; padding-left: 0; list-style: none; }
+  .srcmodal-list li {
+    padding: 9px 0 9px 16px; border-bottom: 1px solid #f2f2f4; position: relative;
+  }
+  .srcmodal-list li:last-child { border-bottom: none; }
+  .srcmodal-list li::before { content: ""; position: absolute; left: 2px; top: 15px; width: 5px; height: 5px; border-radius: 50%; background: #0071e3; }
+  .srcmodal-list a { color: #0071e3; text-decoration: none; word-break: break-all; }
+  .srcmodal-list a:hover { text-decoration: underline; }
+  .srcmodal-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; color: #1a5b30;
+    background: #e7f7ed; border-radius: 5px; padding: 1px 6px; margin-left: 4px; vertical-align: middle;
+  }
+  .srcmodal-empty { color: #6e6e73; margin: 0 0 10px; }
+  .srcmodal-link {
+    display: inline-block; margin-top: 4px; color: #0071e3; text-decoration: none;
+    font-weight: 600; border-bottom: 1px dashed #9cc1f0; padding-bottom: 1px;
+  }
+  .srcmodal-link:hover { border-bottom-color: #0071e3; }
+
   .footer-rotator {
     text-align: center; margin-top: 32px; padding: 16px 0; font-size: 12px; color: #a1a1a6;
     font-style: italic; letter-spacing: 0.2px; transition: opacity 0.6s ease;
   }
   .footer-rotator.fade { opacity: 0; }
-  .footer-link { text-align: center; margin-top: 16px; font-size: 12px; }
-  .footer-link a { color: #6e6e73; text-decoration: none; border-bottom: 1px dashed #c7c7cc; padding-bottom: 1px; transition: all 0.15s; }
-  .footer-link a:hover { color: #1d1d1f; border-bottom-color: #1d1d1f; }
   .version-badge {
     max-width: 640px; margin: 16px auto 0; padding: 0 4px; font-size: 11px; color: #a1a1a6;
     font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace; letter-spacing: 0.2px;
@@ -283,12 +322,19 @@
   </div>
 
   <div class="footer-rotator" id="footerRotator">좋은 보고는 좋은 질문에서 시작됩니다.</div>
-  <div class="footer-link">
-    <a href="https://report.samsungda.net">→ 뽑은 주제로 보고서 자판기에서 작성하기</a>
-  </div>
 </div>
 
 <div class="version-badge" id="versionBadge"></div>
+
+<div class="srcmodal-overlay" id="srcModal" aria-hidden="true">
+  <div class="srcmodal" role="dialog" aria-modal="true" aria-labelledby="srcModalTitle">
+    <div class="srcmodal-head">
+      <span id="srcModalTitle"></span>
+      <button class="srcmodal-close" id="srcModalClose" aria-label="닫기">×</button>
+    </div>
+    <div class="srcmodal-body" id="srcModalBody"></div>
+  </div>
+</div>
 
 <script>
 const TOPIC_LABEL = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
@@ -299,6 +345,7 @@ const selectedTopics = new Set(["consumer", "tech", "rival"]);
 const selectedSources = new Set(["mi", "2030", "reports"]);
 let ideaCount = 3;
 let direction = "sales";
+let lastSources = { reportSources: null, searchSources: [] };
 
 document.querySelectorAll("#topicRow .chip").forEach(chip => {
   chip.addEventListener("click", () => {
@@ -343,7 +390,7 @@ const resultsMeta = document.getElementById("resultsMeta");
 const reportNote = document.getElementById("reportNote");
 
 function fmtElapsed(s) { return s < 60 ? `${s}초` : `${Math.floor(s/60)}분 ${s%60}초`; }
-function srcPills() { return [...selectedSources].map(s => `<span class="pill">${SRC_LABEL[s]}</span>`).join(""); }
+function srcPills() { return [...selectedSources].map(s => `<span class="pill src-pill" data-src="${s}" role="button" tabindex="0" title="참고 자료 보기">${SRC_LABEL[s]}</span>`).join(""); }
 function esc(str){ return String(str==null?"":str).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function inline(str){ // <b>만 허용
   return esc(str).replace(/&lt;b&gt;/g,"<b>").replace(/&lt;\/b&gt;/g,"</b>");
@@ -435,6 +482,7 @@ form.addEventListener("submit", async (e) => {
     if (!ideas.length) throw new Error("생성된 아이디어가 없습니다. 다시 시도해주세요.");
 
     clearInterval(tick);
+    lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [] };
     render(ideas);
     renderReportNote(data.reportSources, selectedSources.has("reports"));
     status.className = "status success";
@@ -484,6 +532,60 @@ setInterval(() => {
 fetch("/api/version").then(r => r.json()).then(d => {
   if (d && d.version) document.getElementById("versionBadge").textContent = "update : " + d.version;
 }).catch(() => {});
+
+// ===== 근거 출처 모달 =====
+const srcModal = document.getElementById("srcModal");
+const srcModalTitle = document.getElementById("srcModalTitle");
+const srcModalBody = document.getElementById("srcModalBody");
+
+function openSourceModal(src) {
+  let html = "";
+  if (src === "search") {
+    const list = lastSources.searchSources || [];
+    html = list.length
+      ? `<ul class="srcmodal-list">` + list.map(s =>
+          `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join("") + `</ul>`
+      : `<p class="srcmodal-empty">이번 생성에서는 웹 검색으로 인용한 기사가 없습니다.</p>`;
+  } else if (src === "reports") {
+    const rs = lastSources.reportSources;
+    const cat = rs && Array.isArray(rs.catalog) ? rs.catalog : [];
+    if (cat.length) {
+      const exc = new Set(rs.excerpted || []);
+      html = `<ul class="srcmodal-list">` + cat.map(t =>
+        `<li>${esc(t)}${exc.has(t) ? ` <span class="srcmodal-badge">본문 참고</span>` : ""}</li>`).join("") + `</ul>`;
+    } else {
+      html = `<p class="srcmodal-empty">참고한 업로드 보고서 정보가 없습니다.</p>`;
+    }
+  } else if (src === "mi") {
+    html = `<p class="srcmodal-empty">Market Insight 보드에서 수집·분류된 최신 시장 신호를 근거 맥락으로 활용했습니다. 개별 기사 목록은 보드에서 확인하세요.</p>`
+      + `<a class="srcmodal-link" href="https://mi.samsungda.net" target="_blank" rel="noopener">→ Market Insight 보드 열기</a>`;
+  } else if (src === "2030") {
+    html = `<p class="srcmodal-empty">2030 미래 트렌드 보드의 메가트렌드를 근거 맥락으로 활용했습니다. 상세 근거는 보드에서 확인하세요.</p>`
+      + `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 트렌드 보드 열기</a>`;
+  } else {
+    html = `<p class="srcmodal-empty">참고 자료 정보가 없습니다.</p>`;
+  }
+  srcModalTitle.textContent = "근거 · " + (SRC_LABEL[src] || src);
+  srcModalBody.innerHTML = html;
+  srcModal.classList.add("show");
+  srcModal.setAttribute("aria-hidden", "false");
+}
+function closeSourceModal() {
+  srcModal.classList.remove("show");
+  srcModal.setAttribute("aria-hidden", "true");
+}
+resultsBody.addEventListener("click", (e) => {
+  const pill = e.target.closest(".src-pill");
+  if (pill) openSourceModal(pill.dataset.src);
+});
+resultsBody.addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("src-pill")) {
+    e.preventDefault(); openSourceModal(e.target.dataset.src);
+  }
+});
+document.getElementById("srcModalClose").addEventListener("click", closeSourceModal);
+srcModal.addEventListener("click", (e) => { if (e.target === srcModal) closeSourceModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSourceModal(); });
 </script>
 </body>
 </html>

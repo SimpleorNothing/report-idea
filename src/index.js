@@ -142,7 +142,8 @@ ${detailRule}`;
   if (!ideas.length) {
     return json({ error: "응답 파싱에 실패했습니다. 다시 시도해주세요.", raw: fullText.slice(0, 300) }, 502);
   }
-  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock, reportSources });
+  const searchSources = useSearch ? collectSearchSources(data.content) : [];
+  return json({ ideas: ideas.slice(0, count), reportsUsed: useReports && !!reportBlock, reportSources, searchSources });
 }
 
 // ===== 업로드 보고서(R2) 컨텍스트 수집 =====
@@ -252,6 +253,24 @@ function xmlToText(xml, maxChars) {
   t = t.replace(/\n{3,}/g, "\n\n").replace(/[ \t]+\n/g, "\n").trim();
   if (maxChars && t.length > maxChars) t = t.slice(0, maxChars) + " …(이하 생략)";
   return t;
+}
+
+// ===== web_search 인용 출처 수집 =====
+// Claude API 응답의 web_search_tool_result 블록에서 실제 참고한 기사(title·url)를 모은다.
+function collectSearchSources(content) {
+  const out = [];
+  const seen = new Set();
+  for (const b of (content || [])) {
+    if (b && b.type === "web_search_tool_result" && Array.isArray(b.content)) {
+      for (const r of b.content) {
+        if (r && r.type === "web_search_result" && r.url && !seen.has(r.url)) {
+          seen.add(r.url);
+          out.push({ title: r.title || r.url, url: r.url });
+        }
+      }
+    }
+  }
+  return out;
 }
 
 function parseIdeas(textOut, topics) {
