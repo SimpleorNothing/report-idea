@@ -84,9 +84,12 @@ async function handleGenerate(request, env) {
     catch (e) { miBlock = ""; }
   }
 
-  // 2030 미래 트렌드 골격 주입 (8대 메가트렌드)
+  // 2030 미래 트렌드 주입 (실사이트 fetch + 선택 주제 관련성 필터)
   let trendBlock = "", trendSources = [];
-  if (use2030) { const r = gather2030(); trendBlock = r.block; trendSources = r.sources; }
+  if (use2030) {
+    try { const r = await gather2030(topics, keyword, env); trendBlock = r.block; trendSources = r.sources; }
+    catch (e) { trendBlock = ""; }
+  }
 
   const detailRule = `각 아이디어는 "title"(문자열), "topic"(문자열), "content", "opportunity", "threat", "angle" 6개 필드를 가진다.
 content·opportunity·threat·angle 네 필드는 모두 "문자열 배열"이며, 각 배열은 핵심만 담은 1~3개의 짧은 항목(bullet)으로 구성한다.
@@ -333,24 +336,89 @@ async function gatherMarketInsight(topics, opts = {}) {
   return { block, sources };
 }
 
-// ===== 2030 미래 트렌드 골격 (8대 메가트렌드) =====
-const MEGATRENDS_2030 = [
-  "T1 AI 에이전트 가전",
-  "T2 데이터센터 냉각·열관리",
-  "T3 저GWP·자연냉매 전환",
-  "T4 히트펌프 전기화",
-  "T5 가전 구독·XaaS(서비스화)",
-  "T6 순환경제·수리권",
-  "T7 VPP·그리드 연계",
-  "T8 실버·헬스케어 가전",
+// ===== 2030 미래 트렌드 (실사이트 fetch + 관련성 필터) =====
+// 2030.samsungda.net 보드를 직접 읽어 8대 메가트렌드의 명칭·관점축·시장근거를 파싱하고,
+// 이번에 선택된 주제(topic)·키워드와 "관련 있는 트렌드"만 추려 근거로 제공한다.
+
+// fetch/파싱 실패 시의 최소 골격 (사이트 카드 기준으로 동기화)
+const MEGATRENDS_2030_FALLBACK = [
+  { id: "T1", name: "AI 에이전트 가전",      chip: "Tech → 기술·소비자축",      ph: "" },
+  { id: "T2", name: "AI 데이터센터 냉각",     chip: "Tech·Econ → 기술·공급망축", ph: "" },
+  { id: "T3", name: "저GWP·자연냉매 전환",    chip: "Env·Pol → 규제·기술축",     ph: "" },
+  { id: "T4", name: "히트펌프 전기화",        chip: "Env·Pol → 규제·기술축",     ph: "" },
+  { id: "T5", name: "가전 구독·서비스화",     chip: "Econ·Social → 소비자·BM",   ph: "" },
+  { id: "T6", name: "순환경제·수리권",        chip: "Env·Pol → 규제·공급망축",   ph: "" },
+  { id: "T7", name: "그리드 인터랙티브 가전", chip: "Env·Tech → 기술·규제축",    ph: "" },
+  { id: "T8", name: "실버·헬스케어 가전",     chip: "Social → 소비자·기술축",    ph: "" },
 ];
 
-function gather2030() {
-  const lines = MEGATRENDS_2030.map(t => "- " + t).join("\n");
-  const block = `[2030 미래 트렌드 — DA 8대 메가트렌드 골격]\n`
-    + `· 2030.samsungda.net 보드가 추적하는 8대 메가트렌드다(트렌드 프레임 단위, 개별 기사 아님).\n`
+// 선택 topic → 트렌드 관점축(chip)에서 찾을 키워드
+const TOPIC_AXIS_KEYS = {
+  consumer: ["소비자", "BM", "Social"],
+  tech:     ["기술", "Tech"],
+  rival:    [], // 경쟁사는 특정 축에 매이지 않음 — 키워드/전체로 처리
+};
+
+// 2030 보드 HTML에서 8대 메가트렌드 카드(명칭·축·근거)를 파싱
+async function fetch2030Trends() {
+  const res = await fetch("https://2030.samsungda.net/", {
+    cf: { cacheTtl: 1800, cacheEverything: true },
+  });
+  if (!res.ok) throw new Error("2030 fetch " + res.status);
+  const html = await res.text();
+  const out = [];
+  const cardRe = /<div class="tag">(T\d)<\/div><h4>([^<]*)<\/h4><span class="chip">([^<]*)<\/span>(?:<div class="ph">([^<]*)<\/div>)?/g;
+  let c;
+  while ((c = cardRe.exec(html))) {
+    out.push({ id: c[1], name: (c[2] || "").trim(), chip: (c[3] || "").trim(), ph: (c[4] || "").trim() });
+  }
+  const seen = new Set();
+  const trends = out.filter(t => !seen.has(t.id) && seen.add(t.id)).sort((a, b) => a.id.localeCompare(b.id));
+  if (trends.length < 4) throw new Error("2030 card parse insufficient: " + trends.length);
+  return trends;
+}
+
+async function gather2030(topics, keyword, env) {
+  let trends;
+  try { trends = await fetch2030Trends(); }
+  catch (e) { trends = MEGATRENDS_2030_FALLBACK; }
+
+  const kwTokens = (keyword || "").trim()
+    ? keyword.split(/[\s,·/]+/).filter(t => t.length >= 2)
+    : [];
+  const axisKeys = (topics || []).flatMap(t => TOPIC_AXIS_KEYS[t] || []);
+
+  const scored = trends.map(t => {
+    const hay = `${t.id} ${t.name} ${t.chip} ${t.ph}`;
+    let kw = 0, ax = 0;
+    for (const tok of kwTokens) if (hay.includes(tok)) kw++;
+    for (const a of axisKeys) if (t.chip.includes(a)) ax++;
+    return { t, kw, ax };
+  });
+
+  // 우선순위: 키워드 직접 매칭 > 주제 관점축 매칭 > 전체
+  let picked, related = true;
+  const kwMatched = scored.filter(s => s.kw > 0);
+  if (kwTokens.length && kwMatched.length) {
+    picked = kwMatched.sort((a, b) => (b.kw - a.kw) || (b.ax - a.ax)).map(s => s.t);
+  } else {
+    const axMatched = scored.filter(s => s.ax > 0);
+    if (axMatched.length) picked = axMatched.sort((a, b) => b.ax - a.ax).map(s => s.t);
+    else { picked = trends; related = false; }
+  }
+
+  const lines = picked.map(t =>
+    `- ${t.id} ${t.name}` + (t.chip ? ` (${t.chip})` : "") + (t.ph ? ` — ${t.ph}` : "")
+  ).join("\n");
+  const head = related
+    ? `[2030 미래 트렌드 — 선택 주제와 관련된 메가트렌드]\n`
+      + `· 2030.samsungda.net 보드의 8대 메가트렌드 중 이번 주제·키워드와 연관된 트렌드만 추렸다(개별 기사 아님).\n`
+    : `[2030 미래 트렌드 — DA 8대 메가트렌드 골격]\n`
+      + `· 2030.samsungda.net 보드의 8대 메가트렌드 전체다(주제 특정 신호가 없어 전체 제공, 개별 기사 아님).\n`;
+  const block = head
     + `· 이 메가트렌드 흐름과 연결해 중장기 보고 주제를 도출하라.\n\n${lines}`;
-  const sources = MEGATRENDS_2030.map(t => ({ title: t }));
+
+  const sources = picked.map(t => ({ title: `${t.id} ${t.name}`, related }));
   return { block, sources };
 }
 
