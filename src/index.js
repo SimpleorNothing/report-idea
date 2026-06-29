@@ -50,7 +50,10 @@ async function handleGenerate(request, env) {
 
   const topics  = Array.isArray(body.topics) && body.topics.length ? body.topics : ["consumer"];
   const count   = Math.max(1, Math.min(8, parseInt(body.count) || 3));
-  const direction = body.direction === "profit" ? "profit" : "sales";
+  let directions = Array.isArray(body.directions)
+    ? body.directions.filter(d => d === "sales" || d === "profit")
+    : [];
+  if (!directions.length) directions = [body.direction === "profit" ? "profit" : "sales"];
   const sources = Array.isArray(body.sources) ? body.sources : [];
   const keyword = (body.keyword || "").trim();
   const useSearch = sources.includes("search");
@@ -108,7 +111,7 @@ ${detailRule}`;
 
   const userParts = [];
   userParts.push(`다음 조건으로 보고 주제 ${count}개를 생성하라.`);
-  userParts.push(`\n[아이디어 방향 — 최우선 기준]\n- ${DIRECTION_GUIDE[direction]}`);
+  userParts.push(`\n[아이디어 방향 — 최우선 기준]\n- ${directions.map(d => DIRECTION_GUIDE[d]).join("\n- ")}`);
   userParts.push(`\n[주제 영역]\n${topicLines}`);
   userParts.push(`\n[근거로 우선 참고할 출처]\n${sourceLines}`);
   if (miBlock) userParts.push(`\n${miBlock}`);
