@@ -253,10 +253,38 @@
   }
   .footer-rotator.fade { opacity: 0; }
   .version-badge {
-    max-width: 640px; margin: 16px auto 0; padding: 0 4px; font-size: 11px; color: #a1a1a6;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace; letter-spacing: 0.2px;
-    user-select: none; text-align: left;
+    max-width: 640px; margin: 16px auto 0; padding: 0 4px; position: relative; text-align: left;
   }
+  .vb-btn {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    padding: 4px 6px; border-radius: 7px; font-size: 11px; color: #a1a1a6;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+    letter-spacing: 0.2px; user-select: none; transition: color .15s, background .15s;
+  }
+  .vb-btn:hover { color: #1a1d21; background: #f0f4fa; }
+  .vb-btn:focus-visible { outline: 2px solid #0071e3; outline-offset: 2px; }
+  .vb-panel {
+    position: absolute; bottom: calc(100% + 8px); left: 0;
+    width: min(420px, calc(100vw - 48px));
+    background: #fff; border: 1px solid #e6e9ee; border-radius: 14px;
+    box-shadow: 0 14px 40px rgba(26,29,33,.14); padding: 8px; z-index: 60;
+    opacity: 0; transform: translateY(6px); pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .vb-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .vb-head { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 12px 8px; }
+  .vb-head h4 { margin: 0; font-size: 13px; font-weight: 700; color: #1a1d21;
+    font-family: 'Pretendard', system-ui, sans-serif; letter-spacing: -0.1px; }
+  .vb-head span { font-size: 11px; color: #a1a1a6; }
+  .vb-panel ul { list-style: none; margin: 0; padding: 0; }
+  .vb-panel li { padding: 11px 12px; border-radius: 10px; border-left: 2px solid transparent; }
+  .vb-panel li:hover { background: #f6f7f9; border-left-color: #0071e3; }
+  .vb-panel li + li { margin-top: 2px; }
+  .vb-time { font-size: 11.5px; color: #a1a1a6; font-variant-numeric: tabular-nums;
+    letter-spacing: 0.2px; margin-bottom: 3px; }
+  .vb-desc { font-size: 13.5px; line-height: 1.5; color: #1a1d21;
+    font-family: 'Pretendard', system-ui, sans-serif; letter-spacing: -0.1px; }
+  @media (prefers-reduced-motion: reduce) { .vb-panel { transition: none; } }
   .test-badge {
     max-width: 640px;
     margin: 0 auto 16px;
@@ -345,7 +373,13 @@
   <div class="footer-rotator" id="footerRotator">좋은 보고는 좋은 질문에서 시작됩니다.</div>
 </div>
 
-<div class="version-badge" id="versionBadge"></div>
+<div class="version-badge" id="versionBadge">
+  <button class="vb-btn" id="vbBtn" type="button" aria-expanded="false" aria-controls="vbPanel" aria-haspopup="true">update : —</button>
+  <div class="vb-panel" id="vbPanel" role="region" aria-label="최근 변경 이력">
+    <div class="vb-head"><h4>최근 변경 이력</h4><span>최근 5개</span></div>
+    <ul id="vbList"></ul>
+  </div>
+</div>
 
 <div class="srcmodal-overlay" id="srcModal" aria-hidden="true">
   <div class="srcmodal" role="dialog" aria-modal="true" aria-labelledby="srcModalTitle">
@@ -560,9 +594,36 @@ setInterval(() => {
   setTimeout(() => { fi = (fi+1) % footerMessages.length; footerEl.textContent = footerMessages[fi]; footerEl.classList.remove("fade"); }, 600);
 }, 6000);
 
-fetch("/api/version").then(r => r.json()).then(d => {
-  if (d && d.version) document.getElementById("versionBadge").textContent = "update : " + d.version;
-}).catch(() => {});
+// ===== update 배지 — 평소엔 연월일(YYYY.MM.DD), 클릭 시 최근 5개(시간+간략 내용) =====
+(function () {
+  const btn = document.getElementById("vbBtn");
+  const panel = document.getElementById("vbPanel");
+  const list = document.getElementById("vbList");
+  const dot = s => String(s).replace(/-/g, ".");
+  const esc = s => String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const setOpen = o => { panel.classList.toggle("open", o); btn.setAttribute("aria-expanded", String(o)); };
+
+  // changelog.json 부재 시 기존 배포 시각(/api/version)으로 폴백
+  const fallback = () => fetch("/api/version").then(r => r.json())
+    .then(d => { if (d && d.version) btn.textContent = "update : " + d.version; })
+    .catch(() => {});
+
+  fetch("/changelog.json", { cache: "no-cache" })
+    .then(r => { if (!r.ok) throw 0; return r.json(); })
+    .then(d => {
+      const e = (d && d.entries) || [];
+      if (!e.length) { fallback(); return; }
+      btn.textContent = "update : " + dot(e[0].date);  // 배지엔 최신 연월일만
+      list.innerHTML = e.slice(0, 5).map(c =>
+        '<li><div class="vb-time">' + dot(c.date) + " " + esc(c.time) + "</div>" +
+        '<div class="vb-desc">' + esc(c.desc) + "</div></li>").join("");
+      btn.addEventListener("click", ev => { ev.stopPropagation(); setOpen(btn.getAttribute("aria-expanded") !== "true"); });
+      document.addEventListener("click", ev => { if (!panel.contains(ev.target) && ev.target !== btn) setOpen(false); });
+      document.addEventListener("keydown", ev => { if (ev.key === "Escape") setOpen(false); });
+    })
+    .catch(() => fallback());
+})();
 
 // ===== 근거 출처 모달 =====
 const srcModal = document.getElementById("srcModal");
