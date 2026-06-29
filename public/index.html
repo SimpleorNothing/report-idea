@@ -305,6 +305,76 @@
     letter-spacing: 0.6px;
     user-select: none;
   }
+  /* ===== 아이디어 뱅크 ===== */
+  .bank { margin-top: 36px; padding-top: 28px; border-top: 1px solid #e8e8ed; }
+  .bank-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bank-title { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+  .bank-wip { font-size: 12px; font-weight: 700; color: #6e6e73; background: #f0f0f2; border: 1px solid #e3e3e8; border-radius: 6px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px; letter-spacing: .2px; }
+  .bank-wip::before { content:""; width:5px; height:5px; border-radius:50%; background:#0071e3; }
+  .bank-count { font-size: 14px; color: #86868b; }
+  .bank-actions { margin-left: auto; display: flex; gap: 6px; }
+  .bank-exp { font-size: 13px; font-weight: 600; color: #6e6e73; background: #f5f5f7; border: 1px solid #e8e8ed; border-radius: 7px; padding: 6px 11px; cursor: pointer; font-family: inherit; transition: .15s; }
+  .bank-exp:hover { border-color: #0071e3; color: #0071e3; }
+  .bank-desc { font-size: 14px; color: #86868b; margin-top: 8px; line-height: 1.6; }
+
+  .bank-search { position: relative; margin: 16px 0 12px; }
+  .bank-search input { width: 100%; font-family: inherit; font-size: 15px; color: #1d1d1f; background: #f5f5f7; border: 1px solid #e8e8ed; border-radius: 10px; padding: 12px 14px 12px 40px; transition: .15s; }
+  .bank-search input::placeholder { color: #a1a1a6; }
+  .bank-search input:focus { outline: none; border-color: #0071e3; background: #fff; }
+  .bank-search .bs-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #a1a1a6; pointer-events: none; }
+
+  .bank-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .bf-chip { font-family: inherit; font-size: 14px; font-weight: 600; color: #6e6e73; background: #f0f0f2; border: none; border-radius: 999px; padding: 7px 14px; cursor: pointer; transition: .15s; }
+  .bf-chip:hover:not(.on) { background: #e8e8ed; }
+  .bf-chip.on { background: #eaf4ff; color: #0071e3; }
+
+  .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .bank-grid { grid-template-columns: 1fr; } }
+
+  .bcard { position: relative; background: #fff; border: 1px solid #e8e8ed; border-radius: 14px; padding: 16px 16px 14px; transition: .15s; display: flex; flex-direction: column; }
+  .bcard:hover { border-color: #0071e3; box-shadow: 0 4px 18px rgba(0,113,227,.10); }
+  .bcard:hover .bc-del { opacity: 1; }
+  .bc-top { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+  .bc-badge { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: #eaf4ff; color: #0071e3; }
+  .bc-badge.profit { background: #f0f0f2; color: #6e6e73; }
+  .bc-tag-topic { font-size: 11.5px; font-weight: 600; color: #86868b; }
+  .bc-title { font-size: 14.5px; font-weight: 700; line-height: 1.45; margin-bottom: 9px; }
+  .bc-bl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+  .bc-bl li { font-size: 12.5px; color: #6e6e73; line-height: 1.6; padding-left: 12px; position: relative; }
+  .bc-bl li::before { content:""; position:absolute; left:2px; top:8px; width:3px; height:3px; border-radius:50%; background:#0071e3; opacity:.5; }
+
+  .bc-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }
+  .bc-tag { font-size: 11.5px; font-weight: 500; color: #6e6e73; background: #f5f5f7; border: 1px solid #e8e8ed; border-radius: 6px; padding: 2px 7px; display: inline-flex; align-items: center; gap: 4px; }
+  .bc-tag .x { cursor: pointer; opacity: 0; transition: .12s; font-size: 12px; }
+  .bcard:hover .bc-tag .x { opacity: .45; }
+  .bc-tag .x:hover { opacity: 1; color: #c0392b; }
+  .bc-tag-add { font-size: 11.5px; font-weight: 500; color: #0071e3; background: #eaf4ff; border: 1px dashed #b9d8ff; border-radius: 6px; padding: 2px 8px; cursor: pointer; transition: .12s; }
+  .bc-tag-add:hover { background: #d8ecff; }
+
+  .bc-memo { margin-top: 11px; font-size: 12.5px; color: #1d1d1f; background: #f7faff; border: 1px solid #e8e8ed; border-left: 3px solid #0071e3; border-radius: 8px; padding: 8px 10px; line-height: 1.6; white-space: pre-wrap; cursor: text; }
+  .bc-memo.empty { color: #a1a1a6; background: transparent; border: 1px dashed #e3e3e8; border-left: 1px dashed #e3e3e8; cursor: pointer; }
+  .bc-memo textarea { width: 100%; font-family: inherit; font-size: 12.5px; color: #1d1d1f; border: none; background: transparent; resize: vertical; min-height: 44px; outline: none; line-height: 1.6; }
+
+  .bc-meta { margin-top: 12px; padding-top: 11px; border-top: 1px solid #f0f0f2; font-size: 12.5px; color: #a1a1a6; display: flex; align-items: center; gap: 6px; }
+  .bc-who { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
+  .bc-avatar { width: 17px; height: 17px; border-radius: 50%; background: #eaf4ff; color: #0071e3; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .bc-del { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px; border: none; background: #f0f0f2; color: #86868b; font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: .12s; display: flex; align-items: center; justify-content: center; }
+  .bc-del:hover { background: #ffe1e1; color: #c0392b; }
+
+  .bank-empty { border: 1px dashed #e3e3e8; border-radius: 14px; padding: 36px 20px; text-align: center; color: #a1a1a6; font-size: 14px; line-height: 1.7; }
+  .bank-empty b { display: block; color: #6e6e73; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .bank-empty.hide { display: none; }
+  .bank-grid.hide { display: none; }
+
+  /* 결과 카드 → 뱅크 저장 버튼 */
+  .idea-card { position: relative; }
+  .idea-save { position: absolute; top: 14px; right: 16px; font-size: 13px; font-weight: 600; color: #0071e3; background: #eaf4ff; border: none; border-radius: 7px; padding: 5px 10px; cursor: pointer; font-family: inherit; transition: .15s; }
+  .idea-save:hover { background: #d8ecff; }
+  .idea-save.saved { color: #1a5b30; background: #e7f7ed; cursor: default; }
+
+  /* 토스트 */
+  .bank-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(16px); background: #1d1d1f; color: #fff; font-size: 14px; padding: 11px 18px; border-radius: 10px; opacity: 0; pointer-events: none; transition: .25s; box-shadow: 0 8px 24px rgba(0,0,0,.18); z-index: 200; }
+  .bank-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -373,6 +443,33 @@
     <div id="resultsBody"></div>
   </div>
 
+  <div class="bank" id="bankSection">
+    <div class="bank-head">
+      <span class="bank-title">아이디어 뱅크</span>
+      <span class="bank-wip">작업중</span>
+      <span class="bank-count" id="bankCount"></span>
+      <div class="bank-actions">
+        <button type="button" class="bank-exp" id="bankExcel">⬇ Excel</button>
+        <button type="button" class="bank-exp" id="bankWord">⬇ Word</button>
+      </div>
+    </div>
+    <div class="bank-desc">팀이 함께 보는 공유 뱅크 · 자판기에서 뽑은 아이디어를 저장하고 메모·태그로 정리합니다.</div>
+
+    <div class="bank-search">
+      <span class="bs-ico">🔍</span>
+      <input type="text" id="bankQuery" placeholder="제목·내용·메모·태그 검색">
+    </div>
+
+    <div class="bank-filters" id="bankFilters">
+      <button type="button" class="bf-chip on" data-f="all">전체</button>
+      <button type="button" class="bf-chip" data-f="sales">매출 확대</button>
+      <button type="button" class="bf-chip" data-f="profit">수익성 강화</button>
+    </div>
+
+    <div class="bank-grid" id="bankGrid"></div>
+    <div class="bank-empty hide" id="bankEmpty"></div>
+  </div>
+
   <div class="footer-rotator" id="footerRotator">좋은 보고는 좋은 질문에서 시작됩니다.</div>
 </div>
 
@@ -405,6 +502,7 @@ let ideaCount = 3;
 const selectedDirections = new Set(["sales"]);
 let lastSources = { reportSources: null, searchSources: [], miSources: [], trendSources: [] };
 let lastIdeas = [];
+let lastDirForSave = "sales";
 let citationMode = false;  // LLM이 아이디어별 인용 ID를 제공하면 true → 근거를 아이디어별로 표시
 
 document.querySelectorAll("#topicRow .chip").forEach(chip => {
@@ -514,6 +612,7 @@ function render(ideas) {
     card.className = "idea-card";
     card.style.animationDelay = (n * 0.07) + "s";
     card.innerHTML = `
+      <button type="button" class="idea-save" data-idx="${n}">🔖 저장</button>
       <div class="idea-top">
         <div class="idea-num">${n + 1}</div>
         <div>
@@ -568,6 +667,7 @@ form.addEventListener("submit", async (e) => {
     clearInterval(tick);
     lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [], miSources: data.miSources || [], trendSources: data.trendSources || [] };
     lastIdeas = ideas;
+    lastDirForSave = [...selectedDirections][0] || "sales";
     citationMode = ideas.some(it => Array.isArray(it.sources) && it.sources.length);
     render(ideas);
     renderReportNote(data.reportSources, selectedSources.has("reports"));
@@ -616,7 +716,200 @@ setInterval(() => {
   setTimeout(() => { fi = (fi+1) % footerMessages.length; footerEl.textContent = footerMessages[fi]; footerEl.classList.remove("fade"); }, 600);
 }, 6000);
 
-// ===== update 배지 — 평소엔 연월일(YYYY.MM.DD), 클릭 시 최근 5개(시간+간략 내용) =====
+// ===== 아이디어 뱅크 =====
+let bankData = [];
+let bankFilter = "all";
+const bankGrid = document.getElementById("bankGrid");
+const bankEmpty = document.getElementById("bankEmpty");
+const bankCount = document.getElementById("bankCount");
+const bankQuery = document.getElementById("bankQuery");
+const DIR_BADGE = { sales: "매출 확대", profit: "수익성 강화" };
+let bankToastTimer;
+
+function bankToast(msg) {
+  let el = document.getElementById("bankToast");
+  if (!el) { el = document.createElement("div"); el.id = "bankToast"; el.className = "bank-toast"; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(bankToastTimer);
+  bankToastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+async function loadBank() {
+  try {
+    const res = await fetch("/api/bank");
+    if (!res.ok) throw new Error("load " + res.status);
+    const data = await res.json();
+    bankData = Array.isArray(data.items) ? data.items : [];
+  } catch (e) { bankData = []; }
+  renderBank();
+}
+
+function renderBank() {
+  const q = bankQuery.value.trim().toLowerCase();
+  bankCount.textContent = bankData.length ? `${bankData.length}건` : "";
+  const list = bankData.filter(x => {
+    if (bankFilter !== "all" && x.dir !== bankFilter) return false;
+    if (!q) return true;
+    const hay = [x.title, (x.content||[]).join(" "), (x.opportunity||[]).join(" "),
+      (x.threat||[]).join(" "), (x.angle||[]).join(" "), x.memo||"", (x.tags||[]).join(" ")]
+      .join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+
+  if (!list.length) {
+    bankGrid.innerHTML = ""; bankGrid.classList.add("hide");
+    bankEmpty.classList.remove("hide");
+    bankEmpty.innerHTML = bankData.length
+      ? "<b>결과가 없습니다</b>검색어나 필터를 바꿔보세요."
+      : "<b>아직 저장된 아이디어가 없습니다</b>위 자판기에서 아이디어를 뽑고 ‘🔖 저장’을 눌러보세요.";
+    return;
+  }
+  bankEmpty.classList.add("hide");
+  bankGrid.classList.remove("hide");
+  bankGrid.innerHTML = list.map(x => {
+    const topic = TOPIC_LABEL[x.topic] || "";
+    const bl = (x.content || []).slice(0, 3).map(b => `<li>${inline(b)}</li>`).join("");
+    const tags = (x.tags || []).map(t =>
+      `<span class="bc-tag">#${esc(t)}<span class="x" data-act="untag" data-id="${x.id}" data-tag="${esc(t)}">×</span></span>`).join("");
+    const memo = x.memo
+      ? `<div class="bc-memo" data-act="memo" data-id="${x.id}">${esc(x.memo)}</div>`
+      : `<div class="bc-memo empty" data-act="memo" data-id="${x.id}">+ 메모 추가</div>`;
+    const author = x.author ? `<span class="bc-who"><span class="bc-avatar">${esc(x.author[0])}</span>${esc(x.author)}</span>` : "";
+    return `
+      <div class="bcard" data-id="${x.id}">
+        <button type="button" class="bc-del" title="삭제" data-act="del" data-id="${x.id}">×</button>
+        <div class="bc-top">
+          <span class="bc-badge ${x.dir==='profit'?'profit':''}">${DIR_BADGE[x.dir]||""}</span>
+          ${topic?`<span class="bc-tag-topic">${esc(topic)}</span>`:""}
+        </div>
+        <div class="bc-title">${esc(x.title)}</div>
+        ${bl?`<ul class="bc-bl">${bl}</ul>`:""}
+        <div class="bc-tags">${tags}<span class="bc-tag-add" data-act="addtag" data-id="${x.id}">+ 태그</span></div>
+        ${memo}
+        <div class="bc-meta">저장 ${esc(x.date||"")}${author}</div>
+      </div>`;
+  }).join("");
+}
+
+// 결과 카드 → 저장 (이벤트 위임)
+resultsBody.addEventListener("click", async (e) => {
+  const sb = e.target.closest(".idea-save");
+  if (!sb || sb.classList.contains("saved")) return;
+  const idx = parseInt(sb.dataset.idx);
+  const idea = lastIdeas[idx];
+  if (!idea) return;
+  sb.disabled = true;
+  try {
+    const res = await fetch("/api/bank", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dir: lastDirForSave, topic: idea.topic, title: idea.title,
+        content: toArr(idea.content), opportunity: toArr(idea.opportunity),
+        threat: toArr(idea.threat), angle: toArr(idea.angle),
+        sources: toArr(idea.sources),
+      }),
+    });
+    if (!res.ok) throw new Error("save " + res.status);
+    sb.classList.add("saved"); sb.textContent = "✓ 저장됨";
+    await loadBank();
+    bankToast("아이디어 뱅크에 저장됐어요");
+  } catch (err) {
+    bankToast("저장 실패 — 잠시 후 다시 시도해주세요");
+  } finally { sb.disabled = false; }
+});
+
+// 뱅크 카드 인터랙션 (이벤트 위임)
+bankGrid.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-act]");
+  if (!t) return;
+  const act = t.dataset.act, id = t.dataset.id;
+  if (act === "del") {
+    if (!confirm("이 아이디어를 뱅크에서 삭제할까요?")) return;
+    try {
+      const res = await fetch("/api/bank?id=" + encodeURIComponent(id), { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      bankData = bankData.filter(x => x.id !== id); renderBank();
+    } catch { bankToast("삭제 실패"); }
+  } else if (act === "untag") {
+    const rec = bankData.find(x => x.id === id); if (!rec) return;
+    const tags = (rec.tags || []).filter(v => v !== t.dataset.tag);
+    await bankPut(id, { tags });
+  } else if (act === "addtag") {
+    const v = prompt("태그 입력"); if (!v) return;
+    const rec = bankData.find(x => x.id === id); if (!rec) return;
+    const tags = [...(rec.tags || [])]; const nt = v.trim();
+    if (nt && !tags.includes(nt)) tags.push(nt);
+    await bankPut(id, { tags });
+  } else if (act === "memo") {
+    if (t.querySelector("textarea")) return;
+    const rec = bankData.find(x => x.id === id); if (!rec) return;
+    t.classList.remove("empty");
+    t.innerHTML = `<textarea>${rec.memo ? esc(rec.memo) : ""}</textarea>`;
+    const ta = t.querySelector("textarea"); ta.focus();
+    ta.value = rec.memo || "";
+    ta.addEventListener("blur", async () => { await bankPut(id, { memo: ta.value.trim() }); }, { once: true });
+  }
+});
+
+async function bankPut(id, patch) {
+  try {
+    const res = await fetch("/api/bank", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...patch }),
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const i = bankData.findIndex(x => x.id === id);
+    if (i !== -1 && data.item) bankData[i] = data.item;
+    renderBank();
+  } catch { bankToast("수정 실패"); renderBank(); }
+}
+
+bankQuery.addEventListener("input", renderBank);
+document.getElementById("bankFilters").addEventListener("click", (e) => {
+  const c = e.target.closest(".bf-chip"); if (!c) return;
+  bankFilter = c.dataset.f;
+  document.querySelectorAll("#bankFilters .bf-chip").forEach(x => x.classList.remove("on"));
+  c.classList.add("on"); renderBank();
+});
+
+// 내보내기
+function bankDownload(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+document.getElementById("bankExcel").addEventListener("click", () => {
+  if (!bankData.length) return bankToast("내보낼 항목이 없습니다");
+  const head = ["방향","주제","제목","내용","당사기회","당사위협","보고서방향","태그","메모","작성자","저장일"];
+  const rows = [head];
+  bankData.forEach(x => rows.push([
+    DIR_BADGE[x.dir]||"", TOPIC_LABEL[x.topic]||"", x.title,
+    (x.content||[]).join(" / "), (x.opportunity||[]).join(" / "),
+    (x.threat||[]).join(" / "), (x.angle||[]).join(" / "),
+    (x.tags||[]).join(", "), x.memo||"", x.author||"", x.date||"",
+  ]));
+  const csv = "\uFEFF" + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  bankDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), "아이디어뱅크.csv");
+  bankToast("Excel(CSV)로 내보냈어요");
+});
+document.getElementById("bankWord").addEventListener("click", () => {
+  if (!bankData.length) return bankToast("내보낼 항목이 없습니다");
+  const sect = (label, arr) => (arr&&arr.length) ? `<p style="margin:4px 0 0"><b>${label}</b></p><ul>${arr.map(b=>`<li>${esc(b)}</li>`).join("")}</ul>` : "";
+  const body = bankData.map((x,i) => `
+    <h3 style="margin:18px 0 2px">${i+1}. ${esc(x.title)}</h3>
+    <p style="color:#666;margin:0">${DIR_BADGE[x.dir]||""}${x.topic?(" · "+(TOPIC_LABEL[x.topic]||"")):""}${x.tags&&x.tags.length?(" · "+x.tags.map(t=>"#"+esc(t)).join(" ")):""}</p>
+    ${sect("내용", x.content)}${sect("당사 기회", x.opportunity)}${sect("당사 위협", x.threat)}${sect("보고서 방향", x.angle)}
+    ${x.memo?`<p style="margin:4px 0 0"><b>메모</b> ${esc(x.memo)}</p>`:""}`).join("");
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family:'Malgun Gothic',sans-serif"><h1>아이디어 뱅크</h1>${body}</body></html>`;
+  bankDownload(new Blob(["\uFEFF"+html], { type: "application/msword" }), "아이디어뱅크.doc");
+  bankToast("Word로 내보냈어요");
+});
+
+loadBank();
+
+
 (function () {
   const btn = document.getElementById("vbBtn");
   const panel = document.getElementById("vbPanel");
