@@ -287,7 +287,7 @@
   <p class="lead">보고서 주제, 30초 안에 뽑아드립니다.</p>
 
   <form id="form">
-    <label>① 아이디어 방향</label>
+    <label>① 아이디어 방향 <span class="sublabel">복수 선택 가능</span></label>
     <div class="mode-row">
       <button type="button" class="mode-card active" data-dir="sales">
         <span class="mode-name">매출 확대</span>
@@ -299,14 +299,14 @@
       </button>
     </div>
 
-    <label>② 주제 선택 <span class="sublabel">복수 선택 가능</span></label>
+    <label>② 분석 관점 <span class="sublabel">복수 선택 가능</span></label>
     <div class="chip-row" id="topicRow">
       <button type="button" class="chip active" data-topic="consumer"><span class="em">🧑‍🤝‍🧑</span>소비자</button>
       <button type="button" class="chip active" data-topic="tech"><span class="em">⚙️</span>기술</button>
       <button type="button" class="chip active" data-topic="rival"><span class="em">🎯</span>경쟁사</button>
     </div>
 
-    <label>③ 소스 <span class="sublabel">복수 선택 가능</span></label>
+    <label>③ 데이터 소스 <span class="sublabel">복수 선택 가능</span></label>
     <div class="source-grid" id="sourceRow">
       <button type="button" class="chip active" data-src="mi">Market Sensing</button>
       <button type="button" class="chip active" data-src="2030">2030 미래 전망</button>
@@ -318,10 +318,10 @@
       <div class="hint">선택 시 웹에서 최신 자료를 추가로 수집해 근거에 반영합니다.</div>
     </div>
 
-    <label>④ 아이디어 갯수</label>
+    <label>④ 생성 개수</label>
     <div class="page-row">
       <button type="button" class="page-btn" data-delta="-1">−</button>
-      <div class="page-display"><span id="countDisplay">3</span><span class="unit">개</span></div>
+      <div class="page-display"><span id="countDisplay">3</span></div>
       <button type="button" class="page-btn" data-delta="1">+</button>
     </div>
 
@@ -365,7 +365,7 @@ const DIR_LABEL = { sales: "매출 확대", profit: "수익성 강화" };
 const selectedTopics = new Set(["consumer", "tech", "rival"]);
 const selectedSources = new Set(["mi", "2030", "reports"]);
 let ideaCount = 3;
-let direction = "sales";
+const selectedDirections = new Set(["sales"]);
 let lastSources = { reportSources: null, searchSources: [], miSources: [], trendSources: [] };
 
 document.querySelectorAll("#topicRow .chip").forEach(chip => {
@@ -397,8 +397,11 @@ document.querySelectorAll(".page-btn").forEach(btn => {
 
 document.querySelectorAll(".mode-card").forEach(card => {
   card.addEventListener("click", () => {
-    direction = card.dataset.dir;
-    document.querySelectorAll(".mode-card").forEach(c => c.classList.toggle("active", c === card));
+    const d = card.dataset.dir;
+    if (selectedDirections.has(d)) {
+      if (selectedDirections.size === 1) return;
+      selectedDirections.delete(d); card.classList.remove("active");
+    } else { selectedDirections.add(d); card.classList.add("active"); }
   });
 });
 
@@ -470,7 +473,7 @@ function render(ideas) {
       <div class="src-foot">근거 : ${srcPills()}</div>`;
     resultsBody.appendChild(card);
   });
-  resultsMeta.textContent = `${ideas.length}개 · ${DIR_LABEL[direction]} · 주제 ${[...selectedTopics].map(t=>TOPIC_LABEL[t]).join("·")}`;
+  resultsMeta.textContent = `${ideas.length}개 · ${[...selectedDirections].map(d=>DIR_LABEL[d]).join("·")} · 주제 ${[...selectedTopics].map(t=>TOPIC_LABEL[t]).join("·")}`;
   resultsHead.classList.add("show");
 }
 
@@ -489,7 +492,7 @@ form.addEventListener("submit", async (e) => {
   const payload = {
     topics: [...selectedTopics],
     count: ideaCount,
-    direction,
+    directions: [...selectedDirections],
     sources: [...selectedSources],
     keyword: document.getElementById("searchKeyword").value.trim()
   };
