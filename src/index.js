@@ -448,10 +448,10 @@ async function gatherMarketInsight(topics, keyword, opts = {}) {
   })).filter(s => s.title);
 
   const lines = top.map(it =>
-    `- [${it._id}] [${it.lens}·${it.grade}] ${it.headline}` + (it.summary ? ` — ${String(it.summary).slice(0, 90)}` : "")
+    `- [${it._id}] [${it.lens}] ${it.headline}` + (it.summary ? ` — ${String(it.summary).slice(0, 90)}` : "")
   ).join("\n");
   const block = `[Market Insight — 실시간 수집·분류된 시장 신호]\n`
-    + `· mi.samsungda.net 파이프라인이 분류한 실데이터다. 각 신호 앞 [M#]는 인용용 소스 ID, 뒤 (렌즈·등급)은 분류 라벨이다.\n`
+    + `· mi.samsungda.net 파이프라인이 분류한 실데이터다. 각 신호 앞 [M#]는 인용용 소스 ID, 뒤 (렌즈)는 분류 라벨이다.\n`
     + (kwTokens.length ? `· 이번 키워드와 관련된 신호를 우선 정렬했다. 무관한 신호는 근거로 끌어오지 마라.\n` : ``)
     + `· 아래 신호를 근거로 보고 주제를 도출하라.\n\n${lines}`;
   return { block, sources };
