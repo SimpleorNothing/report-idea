@@ -377,6 +377,41 @@
   /* 토스트 */
   .bank-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(16px); background: #1d1d1f; color: #fff; font-size: 14px; padding: 11px 18px; border-radius: 10px; opacity: 0; pointer-events: none; transition: .25s; box-shadow: 0 8px 24px rgba(0,0,0,.18); z-index: 200; }
   .bank-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 뱅크 상세 모달 */
+  .bcard { cursor: pointer; }
+  .bmodal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.34); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 210; }
+  .bmodal-overlay.show { display: flex; }
+  .bmodal { background: #fff; border-radius: 16px; max-width: 480px; width: 100%; max-height: 84vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 14px 44px rgba(0,0,0,.24); }
+  .bmodal-head { display: flex; align-items: flex-start; gap: 10px; padding: 18px 20px 14px; border-bottom: 1px solid #e8e8ed; }
+  .bmodal-head .bm-hl { flex: 1; min-width: 0; }
+  .bmodal-head .bm-badges { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+  .bm-badge { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: #eaf4ff; color: #0071e3; }
+  .bm-badge.profit { background: #f0f0f2; color: #6e6e73; }
+  .bm-topic { font-size: 11.5px; font-weight: 600; color: #86868b; }
+  .bmodal-head h3 { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.4; color: #1d1d1f; letter-spacing: -0.2px; }
+  .bmodal-close { flex: none; border: none; background: #f0f0f2; color: #6e6e73; width: 28px; height: 28px; border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer; }
+  .bmodal-close:hover { background: #e8e8ed; color: #1d1d1f; }
+  .bmodal-body { padding: 16px 20px 20px; overflow-y: auto; }
+  .bm-sec { margin-top: 16px; }
+  .bm-sec:first-child { margin-top: 0; }
+  .bm-fl { font-size: 12px; font-weight: 800; letter-spacing: .3px; margin-bottom: 6px; color: #86868b; }
+  .bm-sec.opp { background: #effaf3; border: 1px solid #cdeed9; border-radius: 10px; padding: 11px 13px; }
+  .bm-sec.opp .bm-fl { color: #1a7a42; }
+  .bm-sec.thr { background: #fff1f1; border: 1px solid #f6d6d6; border-radius: 10px; padding: 11px 13px; }
+  .bm-sec.thr .bm-fl { color: #b02a2a; }
+  .bm-sec.angle { background: #eef5ff; border: 1px solid #d6e6fb; border-left: 3px solid #0071e3; border-radius: 10px; padding: 11px 13px; }
+  .bm-sec.angle .bm-fl { color: #0071e3; }
+  .bm-sec .bl { font-size: 14px; color: #3a3a3c; }
+  .bm-sec.opp .bl { color: #2a5e3e; } .bm-sec.opp .bl li::before { background: #1a7a42; }
+  .bm-sec.thr .bl { color: #7a3636; } .bm-sec.thr .bl li::before { background: #b02a2a; }
+  .bm-sec.angle .bl { color: #2b3a4d; } .bm-sec.angle .bl li::before { background: #0071e3; }
+  .bm-sec .bl li::before { background: #86868b; }
+  .bm-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 14px; }
+  .bm-tags span { font-size: 11.5px; font-weight: 500; color: #6e6e73; background: #f5f5f7; border: 1px solid #e8e8ed; border-radius: 6px; padding: 2px 8px; }
+  .bm-memo { margin-top: 14px; font-size: 13px; color: #1d1d1f; background: #f7faff; border: 1px solid #e8e8ed; border-left: 3px solid #0071e3; border-radius: 8px; padding: 9px 11px; line-height: 1.6; white-space: pre-wrap; }
+  .bm-meta { margin-top: 16px; padding-top: 12px; border-top: 1px solid #f0f0f2; font-size: 12px; color: #a1a1a6; display: flex; align-items: center; gap: 6px; }
+  .bm-meta .bc-avatar { width: 17px; height: 17px; }
 </style>
 </head>
 <body>
@@ -492,6 +527,19 @@
       <button class="srcmodal-close" id="srcModalClose" aria-label="닫기">×</button>
     </div>
     <div class="srcmodal-body" id="srcModalBody"></div>
+  </div>
+</div>
+
+<div class="bmodal-overlay" id="bankModal" aria-hidden="true">
+  <div class="bmodal" role="dialog" aria-modal="true" aria-labelledby="bankModalTitle">
+    <div class="bmodal-head">
+      <div class="bm-hl">
+        <div class="bm-badges" id="bankModalBadges"></div>
+        <h3 id="bankModalTitle"></h3>
+      </div>
+      <button class="bmodal-close" id="bankModalClose" aria-label="닫기">×</button>
+    </div>
+    <div class="bmodal-body" id="bankModalBody"></div>
   </div>
 </div>
 
@@ -825,7 +873,11 @@ resultsBody.addEventListener("click", async (e) => {
 // 뱅크 카드 인터랙션 (이벤트 위임)
 bankGrid.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-act]");
-  if (!t) return;
+  if (!t) {
+    const card = e.target.closest(".bcard");
+    if (card) openBankDetail(card.dataset.id);
+    return;
+  }
   const act = t.dataset.act, id = t.dataset.id;
   if (act === "del") {
     if (!confirm("이 아이디어를 뱅크에서 삭제할까요?")) return;
@@ -868,6 +920,45 @@ async function bankPut(id, patch) {
     renderBank();
   } catch { bankToast("수정 실패"); renderBank(); }
 }
+
+// 뱅크 카드 → 저장 당시 전체 내용 상세 모달
+const bankModal = document.getElementById("bankModal");
+function openBankDetail(id) {
+  const x = bankData.find(r => r.id === id);
+  if (!x) return;
+  const blSec = (label, arr, cls) => {
+    const a = (arr || []).map(s => String(s == null ? "" : s).trim()).filter(Boolean);
+    if (!a.length) return "";
+    return `<div class="bm-sec ${cls || ""}"><div class="bm-fl">${label}</div>`
+      + `<ul class="bl">` + a.map(s => `<li>${inline(s)}</li>`).join("") + `</ul></div>`;
+  };
+  const topic = TOPIC_LABEL[x.topic] || "";
+  document.getElementById("bankModalBadges").innerHTML =
+    `<span class="bm-badge ${x.dir === "profit" ? "profit" : ""}">${DIR_BADGE[x.dir] || ""}</span>`
+    + (topic ? `<span class="bm-topic">${esc(topic)}</span>` : "");
+  document.getElementById("bankModalTitle").textContent = x.title || "";
+  const tags = (x.tags || []).length
+    ? `<div class="bm-tags">${(x.tags || []).map(tg => `<span>#${esc(tg)}</span>`).join("")}</div>` : "";
+  const memo = x.memo ? `<div class="bm-memo">📝 ${esc(x.memo)}</div>` : "";
+  const author = x.author
+    ? `<span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px"><span class="bc-avatar">${esc(x.author[0])}</span>${esc(x.author)}</span>` : "";
+  document.getElementById("bankModalBody").innerHTML =
+    blSec("내용", x.content)
+    + blSec("당사 기회", x.opportunity, "opp")
+    + blSec("당사 위협", x.threat, "thr")
+    + blSec("보고서 방향", x.angle, "angle")
+    + tags + memo
+    + `<div class="bm-meta">저장 ${esc(x.date || "")}${author}</div>`;
+  bankModal.classList.add("show");
+  bankModal.setAttribute("aria-hidden", "false");
+}
+function closeBankDetail() {
+  bankModal.classList.remove("show");
+  bankModal.setAttribute("aria-hidden", "true");
+}
+document.getElementById("bankModalClose").addEventListener("click", closeBankDetail);
+bankModal.addEventListener("click", (e) => { if (e.target === bankModal) closeBankDetail(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeBankDetail(); });
 
 bankQuery.addEventListener("input", renderBank);
 document.getElementById("bankFilters").addEventListener("click", (e) => {
