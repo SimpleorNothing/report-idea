@@ -140,16 +140,16 @@ async function handleGenerate(request, env) {
   let reportSources = null;
   if (useReports) {
     try {
-      const rc = await gatherReportContext(env);
+      const rc = await gatherReportContext(env, { topics, keyword });
       reportBlock = rc.block;
-      reportSources = { total: rc.total, catalog: rc.catalog, excerpted: rc.excerpted };
+      reportSources = { total: rc.total, catalog: rc.catalog, excerpted: rc.excerpted, related: rc.related };
     } catch (e) { reportBlock = ""; }
   }
 
   // Market Insight 실데이터 주입 (mi.samsungda.net/data/news.json)
   let miBlock = "", miSources = [];
   if (useMi) {
-    try { const r = await gatherMarketInsight(topics); miBlock = r.block; miSources = r.sources; }
+    try { const r = await gatherMarketInsight(topics, keyword); miBlock = r.block; miSources = r.sources; }
     catch (e) { miBlock = ""; }
   }
 
@@ -241,12 +241,13 @@ ${detailRule}`;
 }
 
 // ===== 업로드 보고서(R2) 컨텍스트 수집 =====
-// 반환: { block, total, catalog:[제목...], excerpted:[본문까지 읽은 제목...] }
+// 반환: { block, total, catalog:[제목...], excerpted:[본문까지 읽은 제목...], related:[키워드 관련 제목...] }
 async function gatherReportContext(env, opts = {}) {
   const maxExtract  = opts.maxExtract  ?? 10;    // 본문 추출할 docx 최대 개수
   const perFileChars = opts.perFileChars ?? 2200; // 파일당 발췌 글자수
   const totalCap    = opts.totalCap    ?? 22000;  // 발췌 총량 상한
-  const empty = { block: "", total: 0, catalog: [], excerpted: [] };
+  const keyword     = (opts.keyword || "").trim();
+  const empty = { block: "", total: 0, catalog: [], excerpted: [], related: [] };
   if (!env.RESEARCH) return empty;
 
   let listed;
@@ -266,7 +267,24 @@ async function gatherReportContext(env, opts = {}) {
   const catalogTitles = objs.map(o => o.title);
   const catalog = catalogTitles.map((t, i) => `${i + 1}. ${t}`).join("\n");
 
-  const docxObjs = objs.filter(o => /\.docx$/i.test(o.name) || /wordprocessingml/i.test(o.type));
+  // 키워드 관련성 스코어 (제목·파일명 기준)
+  const kwTokens = keyword ? keyword.split(/[\s,·/]+/).filter(t => t.length >= 2) : [];
+  const relScore = (o) => {
+    if (!kwTokens.length) return 0;
+    const hay = `${o.title} ${o.name}`;
+    let n = 0;
+    for (const tok of kwTokens) if (hay.includes(tok)) n++;
+    return n;
+  };
+  const relatedTitles = kwTokens.length ? objs.filter(o => relScore(o) > 0).map(o => o.title) : [];
+
+  // 본문 발췌 대상: 키워드 관련 보고서 우선, 동점은 최신순
+  let docxObjs = objs.filter(o => /\.docx$/i.test(o.name) || /wordprocessingml/i.test(o.type));
+  docxObjs = docxObjs.slice().sort((a, b) => {
+    const r = relScore(b) - relScore(a);
+    if (r) return r;
+    return new Date(b.uploaded) - new Date(a.uploaded);
+  });
   const excerpts = [];
   const excerptedTitles = [];
   let total = 0;
@@ -288,12 +306,13 @@ async function gatherReportContext(env, opts = {}) {
 
   let block = `[업로드 보고서 — 실제 사내 보고서]\n`
     + `· 전체 ${objs.length}건. 아래 목록과 본문 발췌는 사내에 실제로 축적된 보고서다.\n`
+    + (kwTokens.length ? `· 이번 주제·키워드와 관련된 보고서 본문을 우선 발췌했다. 무관한 보고서는 근거로 끌어오지 마라.\n` : ``)
     + `· 이미 다룬 주제는 그대로 반복하지 말고, 빈틈·후속·심화·교차 주제를 우선 발굴하라.\n\n`
     + `[보고서 목록]\n${catalog}`;
   if (excerpts.length) {
     block += `\n\n[주요 보고서 본문 발췌]\n${excerpts.join("\n\n")}`;
   }
-  return { block, total: objs.length, catalog: catalogTitles, excerpted: excerptedTitles };
+  return { block, total: objs.length, catalog: catalogTitles, excerpted: excerptedTitles, related: relatedTitles };
 }
 
 function safeDecode(s) {
@@ -354,7 +373,7 @@ function xmlToText(xml, maxChars) {
 const LENS_MAP = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
 const GRADE_RANK = { "긴급": 4, "주요": 3, "주시": 2, "참고": 1 };
 
-async function gatherMarketInsight(topics, opts = {}) {
+async function gatherMarketInsight(topics, keyword, opts = {}) {
   const perLens = opts.perLens ?? 6;   // 렌즈별 최대 항목
   const cap     = opts.cap ?? 18;      // 총 상한
   const empty = { block: "", sources: [] };
@@ -371,24 +390,50 @@ async function gatherMarketInsight(topics, opts = {}) {
   } catch (e) { return empty; }
 
   const items = Array.isArray(data.items) ? data.items : [];
+
+  // 키워드 관련성: headline·summary·products·competitors 매칭 수
+  const kwTokens = (keyword || "").trim()
+    ? keyword.split(/[\s,·/]+/).filter(t => t.length >= 2)
+    : [];
+  const kwHit = (it) => {
+    if (!kwTokens.length) return 0;
+    const hay = [
+      it.headline, it.summary,
+      Array.isArray(it.products) ? it.products.join(" ") : it.products,
+      Array.isArray(it.competitors) ? it.competitors.join(" ") : it.competitors,
+    ].map(x => String(x || "")).join(" ");
+    let n = 0;
+    for (const tok of kwTokens) if (hay.includes(tok)) n++;
+    return n;
+  };
+  const sortFn = (a, b) => {
+    const kw = kwHit(b) - kwHit(a);   // 키워드 관련성 최우선
+    if (kw) return kw;
+    const gr = (GRADE_RANK[b.grade] || 0) - (GRADE_RANK[a.grade] || 0);
+    if (gr) return gr;
+    const im = (b.impact || 0) - (a.impact || 0);
+    if (im) return im;
+    return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+  };
+
   const byLens = {};
   for (const it of items) {
     if (it && wantLens.has(it.lens)) (byLens[it.lens] = byLens[it.lens] || []).push(it);
   }
   const picked = [];
   for (const lens of wantLens) {
-    const arr = (byLens[lens] || []).slice().sort((a, b) => {
-      const gr = (GRADE_RANK[b.grade] || 0) - (GRADE_RANK[a.grade] || 0);
-      if (gr) return gr;
-      const im = (b.impact || 0) - (a.impact || 0);
-      if (im) return im;
-      return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
-    }).slice(0, perLens);
+    let arr = (byLens[lens] || []).slice();
+    // 키워드가 있고 그 렌즈에 매칭 항목이 있으면 매칭된 것만 남긴다
+    if (kwTokens.length) {
+      const matched = arr.filter(it => kwHit(it) > 0);
+      if (matched.length) arr = matched;
+    }
+    arr = arr.sort(sortFn).slice(0, perLens);
     picked.push(...arr);
   }
   if (!picked.length) return empty;
 
-  const top = picked.slice(0, cap);
+  const top = picked.sort(sortFn).slice(0, cap);
   const sources = top.map(it => ({
     title: it.headline || "",
     url: it.url || "",
@@ -401,6 +446,7 @@ async function gatherMarketInsight(topics, opts = {}) {
   ).join("\n");
   const block = `[Market Insight — 실시간 수집·분류된 시장 신호]\n`
     + `· mi.samsungda.net 파이프라인이 분류한 실데이터다. 렌즈(소비자/기술/경쟁사)·등급(긴급>주요>주시>참고) 기준 상위 항목.\n`
+    + (kwTokens.length ? `· 이번 키워드와 관련된 신호를 우선 정렬했다. 무관한 신호는 근거로 끌어오지 마라.\n` : ``)
     + `· 아래 신호를 근거로 보고 주제를 도출하라.\n\n${lines}`;
   return { block, sources };
 }
