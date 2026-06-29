@@ -24,7 +24,8 @@ export default {
 };
 
 // ===== /changelog.json — GitHub main 커밋에서 최근 변경 이력을 동적 생성 =====
-// 머지되면 자동 반영. GitHub API 실패 시 정적 public/changelog.json 으로 폴백.
+// 머지되면 자동 반영. 데이터 소스는 GitHub 커밋 Atom 피드(github.com, CDN 캐시·rate-limit-free).
+// 정적 public/changelog.json은 제거됨 → 자산 충돌 없이 이 Worker 핸들러가 처리.
 const CHANGELOG_REPO = "SimpleorNothing/report-idea";
 const CHANGELOG_BRANCH = "main";
 
@@ -35,26 +36,24 @@ async function handleChangelog(request, env, ctx) {
   if (hit) return hit;
 
   try {
-    const api = `https://api.github.com/repos/${CHANGELOG_REPO}/commits?sha=${CHANGELOG_BRANCH}&per_page=15`;
-    const gh = await fetch(api, {
-      headers: {
-        "User-Agent": "report-idea-changelog",
-        Accept: "application/vnd.github+json",
-      },
+    // api.github.com(비인증 60/시간) 대신 커밋 Atom 피드를 사용 — CDN 캐시, rate limit 사실상 없음
+    const feedUrl = `https://github.com/${CHANGELOG_REPO}/commits/${CHANGELOG_BRANCH}.atom`;
+    const gh = await fetch(feedUrl, {
+      headers: { "User-Agent": "report-idea-changelog" },
+      cf: { cacheTtl: 300, cacheEverything: true },
     });
-    if (!gh.ok) throw new Error("github " + gh.status);
-    const commits = await gh.json();
+    if (!gh.ok) throw new Error("atom " + gh.status);
+    const xml = await gh.text();
 
     const entries = [];
-    for (const c of commits) {
-      const msg = (c && c.commit && c.commit.message) || "";
-      const subject = msg.split("\n")[0].trim();
+    for (const block of xml.split("<entry>").slice(1)) {
+      const tm = block.match(/<title>([\s\S]*?)<\/title>/);
+      const um = block.match(/<updated>([\s\S]*?)<\/updated>/);
+      if (!tm || !um) continue;
+      const subject = decodeXml(tm[1]).replace(/\s+/g, " ").trim();
       if (!subject || /^Merge\b/i.test(subject)) continue;       // 머지 커밋 제외
       const desc = subject.replace(/\s*\(#\d+\)\s*$/, "").trim(); // PR 번호 꼬리 제거
-      const iso =
-        (c.commit.committer && c.commit.committer.date) ||
-        (c.commit.author && c.commit.author.date);
-      const { date, time } = toKST(iso);
+      const { date, time } = toKST(um[1].trim());
       if (!date) continue;
       entries.push({ date, time, desc });
       if (entries.length >= 5) break;
@@ -70,11 +69,17 @@ async function handleChangelog(request, env, ctx) {
     ctx.waitUntil(cache.put(cacheKey, resp.clone()));
     return resp;
   } catch (e) {
-    // 폴백: 정적 public/changelog.json (수동 큐레이션 안전망)
-    return env.ASSETS.fetch(
-      new Request(new URL("/changelog.json", request.url), request)
-    );
+    // Atom 피드 일시 실패 → 502. 프런트가 /api/version(배포 시각)으로 폴백한다.
+    return json({ error: "changelog feed unavailable" }, 502);
   }
+}
+
+// XML 엔티티 디코드 (&amp; 는 마지막에)
+function decodeXml(s) {
+  return String(s)
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
 }
 
 // ISO(UTC) → KST(UTC+9) date/time
