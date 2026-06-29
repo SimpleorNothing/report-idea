@@ -306,7 +306,9 @@
     user-select: none;
   }
   /* ===== 아이디어 뱅크 ===== */
-  .bank { margin-top: 36px; padding-top: 28px; border-top: 1px solid #e8e8ed; }
+  .wrap + .wrap { margin-top: 20px; }
+  .bank-wrap .bank-head { margin-top: 0; }
+  .bank { }
   .bank-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .bank-title { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
   .bank-wip { font-size: 12px; font-weight: 700; color: #6e6e73; background: #f0f0f2; border: 1px solid #e3e3e8; border-radius: 6px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px; letter-spacing: .2px; }
@@ -442,7 +444,9 @@
     <div id="reportNote" class="report-note"></div>
     <div id="resultsBody"></div>
   </div>
+</div>
 
+<div class="wrap bank-wrap" id="bankWrap">
   <div class="bank" id="bankSection">
     <div class="bank-head">
       <span class="bank-title">아이디어 뱅크</span>
