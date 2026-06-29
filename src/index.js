@@ -15,10 +15,79 @@ export default {
     if (url.pathname === "/api/version") {
       return handleVersion(env);
     }
+    if (url.pathname === "/changelog.json") {
+      return handleChangelog(request, env, ctx);
+    }
     // 그 외는 정적 자산
     return env.ASSETS.fetch(request);
   },
 };
+
+// ===== /changelog.json — GitHub main 커밋에서 최근 변경 이력을 동적 생성 =====
+// 머지되면 자동 반영. GitHub API 실패 시 정적 public/changelog.json 으로 폴백.
+const CHANGELOG_REPO = "SimpleorNothing/report-idea";
+const CHANGELOG_BRANCH = "main";
+
+async function handleChangelog(request, env, ctx) {
+  const cache = caches.default;
+  const cacheKey = new Request("https://changelog.cache/report-idea");
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
+
+  try {
+    const api = `https://api.github.com/repos/${CHANGELOG_REPO}/commits?sha=${CHANGELOG_BRANCH}&per_page=15`;
+    const gh = await fetch(api, {
+      headers: {
+        "User-Agent": "report-idea-changelog",
+        Accept: "application/vnd.github+json",
+      },
+    });
+    if (!gh.ok) throw new Error("github " + gh.status);
+    const commits = await gh.json();
+
+    const entries = [];
+    for (const c of commits) {
+      const msg = (c && c.commit && c.commit.message) || "";
+      const subject = msg.split("\n")[0].trim();
+      if (!subject || /^Merge\b/i.test(subject)) continue;       // 머지 커밋 제외
+      const desc = subject.replace(/\s*\(#\d+\)\s*$/, "").trim(); // PR 번호 꼬리 제거
+      const iso =
+        (c.commit.committer && c.commit.committer.date) ||
+        (c.commit.author && c.commit.author.date);
+      const { date, time } = toKST(iso);
+      if (!date) continue;
+      entries.push({ date, time, desc });
+      if (entries.length >= 5) break;
+    }
+    if (!entries.length) throw new Error("empty");
+
+    const resp = new Response(JSON.stringify({ entries }), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+    ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+    return resp;
+  } catch (e) {
+    // 폴백: 정적 public/changelog.json (수동 큐레이션 안전망)
+    return env.ASSETS.fetch(
+      new Request(new URL("/changelog.json", request.url), request)
+    );
+  }
+}
+
+// ISO(UTC) → KST(UTC+9) date/time
+function toKST(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  const k = new Date(d.getTime() + 9 * 3600 * 1000);
+  const p = (n) => String(n).padStart(2, "0");
+  return {
+    date: `${k.getUTCFullYear()}-${p(k.getUTCMonth() + 1)}-${p(k.getUTCDate())}`,
+    time: `${p(k.getUTCHours())}:${p(k.getUTCMinutes())}`,
+  };
+}
 
 const TOPIC_GUIDE = {
   consumer: "소비자 — 수요·라이프스타일 변화, 구매요인(KBF), 세대/가구구조, 가격민감도, 채널·구독 등 고객 관점의 보고 주제",
