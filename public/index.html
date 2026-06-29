@@ -308,9 +308,9 @@
 
     <label>③ 소스 <span class="sublabel">복수 선택 가능</span></label>
     <div class="source-grid" id="sourceRow">
-      <button type="button" class="chip active" data-src="mi">Market Insight</button>
-      <button type="button" class="chip active" data-src="2030">2030 미래트렌드</button>
-      <button type="button" class="chip active" data-src="reports">업로드 보고서</button>
+      <button type="button" class="chip active" data-src="mi">Market Sensing</button>
+      <button type="button" class="chip active" data-src="2030">2030 미래 전망</button>
+      <button type="button" class="chip active" data-src="reports">클로드 작성 워드보고서</button>
       <button type="button" class="chip" data-src="search">🔎 신규 검색</button>
     </div>
     <div class="search-input-wrap" id="searchWrap">
@@ -359,7 +359,7 @@
 
 <script>
 const TOPIC_LABEL = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
-const SRC_LABEL = { mi:"Market Insight", "2030":"2030 미래트렌드", reports:"업로드 보고서", search:"신규 검색" };
+const SRC_LABEL = { mi:"Market Sensing", "2030":"2030 미래 전망", reports:"클로드 작성 워드보고서", search:"신규 검색" };
 const DIR_LABEL = { sales: "매출 확대", profit: "수익성 강화" };
 
 const selectedTopics = new Set(["consumer", "tech", "rival"]);
@@ -586,21 +586,21 @@ function openSourceModal(src) {
     }
   } else if (src === "mi") {
     const list = lastSources.miSources || [];
-    const boardLink = `<a class="srcmodal-link" href="https://mi.samsungda.net" target="_blank" rel="noopener">→ Market Insight 보드 열기</a>`;
+    const boardLink = `<a class="srcmodal-link" href="https://mi.samsungda.net" target="_blank" rel="noopener">→ Market Sensing 보드 열기</a>`;
     html = (list.length
       ? `<ul class="srcmodal-list">` + list.map(s => {
           const tag = [s.lens, s.grade].filter(Boolean).join("·");
           return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
             + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
         }).join("") + `</ul>`
-      : `<p class="srcmodal-empty">이번 생성에서 참고한 Market Insight 신호가 없습니다.</p>`) + boardLink;
+      : `<p class="srcmodal-empty">이번 생성에서 참고한 Market Sensing 신호가 없습니다.</p>`) + boardLink;
   } else if (src === "2030") {
     const list = lastSources.trendSources || [];
-    const boardLink = `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 트렌드 보드 열기</a>`;
+    const boardLink = `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 전망 보드 열기</a>`;
     html = (list.length
       ? `<p class="srcmodal-empty">2030 보드의 8대 메가트렌드 골격을 근거 맥락으로 활용했습니다(개별 기사 아님).</p>`
         + `<ul class="srcmodal-list">` + list.map(s => `<li>${esc(s.title)}</li>`).join("") + `</ul>`
-      : `<p class="srcmodal-empty">2030 미래 트렌드 보드의 메가트렌드를 근거 맥락으로 활용했습니다.</p>`) + boardLink;
+      : `<p class="srcmodal-empty">2030 미래 전망 보드의 메가트렌드를 근거 맥락으로 활용했습니다.</p>`) + boardLink;
   } else {
     html = `<p class="srcmodal-empty">참고 자료 정보가 없습니다.</p>`;
   }
