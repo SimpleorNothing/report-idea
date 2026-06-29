@@ -643,10 +643,19 @@ function openSourceModal(src) {
   } else if (src === "reports") {
     const rs = lastSources.reportSources;
     const cat = rs && Array.isArray(rs.catalog) ? rs.catalog : [];
-    if (cat.length) {
-      const exc = new Set(rs.excerpted || []);
-      html = `<ul class="srcmodal-list">` + cat.map(t =>
+    const rel = rs && Array.isArray(rs.related) ? rs.related : [];
+    const exc = new Set((rs && rs.excerpted) || []);
+    const total = (rs && rs.total) || cat.length;
+    // 표시 대상: 키워드 관련(related) 우선, 없으면 본문 참고(excerpted)만
+    let show = [...new Set(rel.length ? rel : [...exc])];
+    if (show.length) {
+      const head = rel.length
+        ? `<p class="srcmodal-empty">이번 주제·키워드와 관련된 보고서 ${show.length}건입니다(전체 ${total}건 중).</p>`
+        : `<p class="srcmodal-empty">Claude가 본문까지 읽은 보고서 ${show.length}건입니다(전체 ${total}건 중).</p>`;
+      html = head + `<ul class="srcmodal-list">` + show.map(t =>
         `<li>${esc(t)}${exc.has(t) ? ` <span class="srcmodal-badge">본문 참고</span>` : ""}</li>`).join("") + `</ul>`;
+    } else if (cat.length) {
+      html = `<p class="srcmodal-empty">키워드를 입력하면 관련 보고서만 추려 보여줍니다. 이번 생성에서는 본문까지 참고한 보고서가 없습니다(전체 ${total}건).</p>`;
     } else {
       html = `<p class="srcmodal-empty">참고한 업로드 보고서 정보가 없습니다.</p>`;
     }
@@ -662,9 +671,13 @@ function openSourceModal(src) {
       : `<p class="srcmodal-empty">이번 생성에서 참고한 Market Sensing 신호가 없습니다.</p>`) + boardLink;
   } else if (src === "2030") {
     const list = lastSources.trendSources || [];
+    const rel2030 = list.some(s => s && s.related);
+    const lead = rel2030
+      ? `이번 주제·키워드와 관련된 메가트렌드만 근거 맥락으로 추렸습니다(개별 기사 아님).`
+      : `2030 보드의 8대 메가트렌드 골격을 근거 맥락으로 활용했습니다(주제 특정 신호가 없어 전체 제공, 개별 기사 아님).`;
     const boardLink = `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 전망 보드 열기</a>`;
     html = (list.length
-      ? `<p class="srcmodal-empty">2030 보드의 8대 메가트렌드 골격을 근거 맥락으로 활용했습니다(개별 기사 아님).</p>`
+      ? `<p class="srcmodal-empty">${lead}</p>`
         + `<ul class="srcmodal-list">` + list.map(s => `<li>${esc(s.title)}</li>`).join("") + `</ul>`
       : `<p class="srcmodal-empty">2030 미래 전망 보드의 메가트렌드를 근거 맥락으로 활용했습니다.</p>`) + boardLink;
   } else {
