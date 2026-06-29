@@ -206,6 +206,7 @@
 
   .src-foot { margin-top: 12px; font-size: 15px; color: #a1a1a6; }
   .src-foot .pill { display:inline-block; background:#f5f5f7; border-radius:5px; padding:1px 7px; margin-right:4px; }
+  .src-foot .pill-none { color:#b8b8be; font-style:italic; cursor:default; }
 
   /* 근거 출처 모달 */
   .src-pill { cursor: pointer; transition: all .12s; }
@@ -403,6 +404,8 @@ const selectedSources = new Set(["mi", "2030", "reports"]);
 let ideaCount = 3;
 const selectedDirections = new Set(["sales"]);
 let lastSources = { reportSources: null, searchSources: [], miSources: [], trendSources: [] };
+let lastIdeas = [];
+let citationMode = false;  // LLM이 아이디어별 인용 ID를 제공하면 true → 근거를 아이디어별로 표시
 
 document.querySelectorAll("#topicRow .chip").forEach(chip => {
   chip.addEventListener("click", () => {
@@ -450,7 +453,22 @@ const resultsMeta = document.getElementById("resultsMeta");
 const reportNote = document.getElementById("reportNote");
 
 function fmtElapsed(s) { return s < 60 ? `${s}초` : `${Math.floor(s/60)}분 ${s%60}초`; }
-function srcPills() { return [...selectedSources].map(s => `<span class="pill src-pill" data-src="${s}" role="button" tabindex="0" title="참고 자료 보기">${SRC_LABEL[s]}</span>`).join(""); }
+function pillTag(s, idx) {
+  const ds = idx == null ? "" : ` data-idea="${idx}"`;
+  return `<span class="pill src-pill" data-src="${s}"${ds} role="button" tabindex="0" title="참고 자료 보기">${SRC_LABEL[s]}</span>`;
+}
+function srcPills(idea, idx) {
+  if (!citationMode) return [...selectedSources].map(s => pillTag(s, null)).join("");
+  const ids = (idea && Array.isArray(idea.sources)) ? idea.sources : [];
+  const types = [];
+  if (ids.some(id => /^M/.test(id))) types.push("mi");
+  if (ids.some(id => /^T/.test(id))) types.push("2030");
+  if (ids.some(id => /^R/.test(id))) types.push("reports");
+  // 웹 검색은 호출 단위라 아이디어별 분리가 불가 — 선택·인용기사 있으면 전체로 노출
+  if (selectedSources.has("search") && (lastSources.searchSources || []).length) types.push("search");
+  if (!types.length) return `<span class="pill pill-none">직접 인용한 소스 없음</span>`;
+  return types.map(s => pillTag(s, idx)).join("");
+}
 function esc(str){ return String(str==null?"":str).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function inline(str){ // <b>만 허용
   return esc(str).replace(/&lt;b&gt;/g,"<b>").replace(/&lt;\/b&gt;/g,"</b>");
@@ -506,7 +524,7 @@ function render(ideas) {
       <div class="idea-content"><div class="fl">내용</div>${bullets(idea.content)}</div>
       ${otRow}
       ${angle}
-      <div class="src-foot">근거 : ${srcPills()}</div>`;
+      <div class="src-foot">근거 : ${srcPills(idea, n)}</div>`;
     resultsBody.appendChild(card);
   });
   resultsMeta.textContent = `${ideas.length}개 · ${[...selectedDirections].map(d=>DIR_LABEL[d]).join("·")} · 주제 ${[...selectedTopics].map(t=>TOPIC_LABEL[t]).join("·")}`;
@@ -549,6 +567,8 @@ form.addEventListener("submit", async (e) => {
 
     clearInterval(tick);
     lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [], miSources: data.miSources || [], trendSources: data.trendSources || [] };
+    lastIdeas = ideas;
+    citationMode = ideas.some(it => Array.isArray(it.sources) && it.sources.length);
     render(ideas);
     renderReportNote(data.reportSources, selectedSources.has("reports"));
     status.className = "status success";
@@ -632,7 +652,11 @@ const srcModal = document.getElementById("srcModal");
 const srcModalTitle = document.getElementById("srcModalTitle");
 const srcModalBody = document.getElementById("srcModalBody");
 
-function openSourceModal(src) {
+function openSourceModal(src, ideaIdx) {
+  // citationMode + 유효 아이디어일 때만 아이디어별 인용 ID로 필터
+  const idea = (citationMode && ideaIdx != null && lastIdeas[ideaIdx]) ? lastIdeas[ideaIdx] : null;
+  const ideaIds = idea && Array.isArray(idea.sources) ? idea.sources : null;
+  const titleSuffix = idea ? ` · ${esc(idea.title).slice(0, 24)}…` : "";
   let html = "";
   if (src === "search") {
     const list = lastSources.searchSources || [];
@@ -642,48 +666,70 @@ function openSourceModal(src) {
       : `<p class="srcmodal-empty">이번 생성에서는 웹 검색으로 인용한 기사가 없습니다.</p>`;
   } else if (src === "reports") {
     const rs = lastSources.reportSources;
-    const cat = rs && Array.isArray(rs.catalog) ? rs.catalog : [];
-    const rel = rs && Array.isArray(rs.related) ? rs.related : [];
-    const exc = new Set((rs && rs.excerpted) || []);
-    const total = (rs && rs.total) || cat.length;
-    // 표시 대상: 키워드 관련(related) 우선, 없으면 본문 참고(excerpted)만
-    let show = [...new Set(rel.length ? rel : [...exc])];
-    if (show.length) {
-      const head = rel.length
-        ? `<p class="srcmodal-empty">이번 주제·키워드와 관련된 보고서 ${show.length}건입니다(전체 ${total}건 중).</p>`
-        : `<p class="srcmodal-empty">Claude가 본문까지 읽은 보고서 ${show.length}건입니다(전체 ${total}건 중).</p>`;
-      html = head + `<ul class="srcmodal-list">` + show.map(t =>
-        `<li>${esc(t)}${exc.has(t) ? ` <span class="srcmodal-badge">본문 참고</span>` : ""}</li>`).join("") + `</ul>`;
-    } else if (cat.length) {
-      html = `<p class="srcmodal-empty">키워드를 입력하면 관련 보고서만 추려 보여줍니다. 이번 생성에서는 본문까지 참고한 보고서가 없습니다(전체 ${total}건).</p>`;
+    const items = rs && Array.isArray(rs.items) ? rs.items : [];
+    if (ideaIds) {
+      const cited = items.filter(it => ideaIds.includes(it.id));
+      html = cited.length
+        ? `<p class="srcmodal-empty">이 아이디어가 근거로 삼은 보고서 ${cited.length}건입니다.</p>`
+          + `<ul class="srcmodal-list">` + cited.map(it =>
+            `<li>${esc(it.title)} <span class="srcmodal-badge">본문 참고</span></li>`).join("") + `</ul>`
+        : `<p class="srcmodal-empty">이 아이디어가 직접 인용한 업로드 보고서가 없습니다.</p>`;
     } else {
-      html = `<p class="srcmodal-empty">참고한 업로드 보고서 정보가 없습니다.</p>`;
+      const cat = rs && Array.isArray(rs.catalog) ? rs.catalog : [];
+      const rel = rs && Array.isArray(rs.related) ? rs.related : [];
+      const exc = new Set((rs && rs.excerpted) || []);
+      const total = (rs && rs.total) || cat.length;
+      let show = [...new Set(rel.length ? rel : [...exc])];
+      if (show.length) {
+        const head = rel.length
+          ? `<p class="srcmodal-empty">이번 주제·키워드와 관련된 보고서 ${show.length}건입니다(전체 ${total}건 중).</p>`
+          : `<p class="srcmodal-empty">Claude가 본문까지 읽은 보고서 ${show.length}건입니다(전체 ${total}건 중).</p>`;
+        html = head + `<ul class="srcmodal-list">` + show.map(t =>
+          `<li>${esc(t)}${exc.has(t) ? ` <span class="srcmodal-badge">본문 참고</span>` : ""}</li>`).join("") + `</ul>`;
+      } else if (cat.length) {
+        html = `<p class="srcmodal-empty">이번 생성에서는 본문까지 참고한 보고서가 없습니다(전체 ${total}건).</p>`;
+      } else {
+        html = `<p class="srcmodal-empty">참고한 업로드 보고서 정보가 없습니다.</p>`;
+      }
     }
   } else if (src === "mi") {
-    const list = lastSources.miSources || [];
+    let list = lastSources.miSources || [];
+    if (ideaIds) list = list.filter(s => ideaIds.includes(s.id));
     const boardLink = `<a class="srcmodal-link" href="https://mi.samsungda.net" target="_blank" rel="noopener">→ Market Sensing 보드 열기</a>`;
+    const emptyMsg = ideaIds
+      ? `이 아이디어가 직접 인용한 Market Sensing 신호가 없습니다.`
+      : `이번 생성에서 참고한 Market Sensing 신호가 없습니다.`;
     html = (list.length
-      ? `<ul class="srcmodal-list">` + list.map(s => {
+      ? (ideaIds ? `<p class="srcmodal-empty">이 아이디어가 근거로 삼은 신호 ${list.length}건입니다.</p>` : ``)
+        + `<ul class="srcmodal-list">` + list.map(s => {
           const tag = [s.lens, s.grade].filter(Boolean).join("·");
           return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
             + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
         }).join("") + `</ul>`
-      : `<p class="srcmodal-empty">이번 생성에서 참고한 Market Sensing 신호가 없습니다.</p>`) + boardLink;
+      : `<p class="srcmodal-empty">${emptyMsg}</p>`) + boardLink;
   } else if (src === "2030") {
-    const list = lastSources.trendSources || [];
-    const rel2030 = list.some(s => s && s.related);
-    const lead = rel2030
-      ? `이번 주제·키워드와 관련된 메가트렌드만 근거 맥락으로 추렸습니다(개별 기사 아님).`
-      : `2030 보드의 8대 메가트렌드 골격을 근거 맥락으로 활용했습니다(주제 특정 신호가 없어 전체 제공, 개별 기사 아님).`;
+    let list = lastSources.trendSources || [];
+    if (ideaIds) list = list.filter(s => ideaIds.includes(s.id));
     const boardLink = `<a class="srcmodal-link" href="https://2030.samsungda.net" target="_blank" rel="noopener">→ 2030 미래 전망 보드 열기</a>`;
-    html = (list.length
-      ? `<p class="srcmodal-empty">${lead}</p>`
-        + `<ul class="srcmodal-list">` + list.map(s => `<li>${esc(s.title)}</li>`).join("") + `</ul>`
-      : `<p class="srcmodal-empty">2030 미래 전망 보드의 메가트렌드를 근거 맥락으로 활용했습니다.</p>`) + boardLink;
+    if (ideaIds) {
+      html = (list.length
+        ? `<p class="srcmodal-empty">이 아이디어와 연결된 메가트렌드입니다.</p>`
+          + `<ul class="srcmodal-list">` + list.map(s => `<li>${esc(s.title)}</li>`).join("") + `</ul>`
+        : `<p class="srcmodal-empty">이 아이디어가 직접 인용한 메가트렌드가 없습니다.</p>`) + boardLink;
+    } else {
+      const rel2030 = list.some(s => s && s.related);
+      const lead = rel2030
+        ? `이번 주제·키워드와 관련된 메가트렌드만 근거 맥락으로 추렸습니다(개별 기사 아님).`
+        : `2030 보드의 8대 메가트렌드 골격을 근거 맥락으로 활용했습니다(주제 특정 신호가 없어 전체 제공, 개별 기사 아님).`;
+      html = (list.length
+        ? `<p class="srcmodal-empty">${lead}</p>`
+          + `<ul class="srcmodal-list">` + list.map(s => `<li>${esc(s.title)}</li>`).join("") + `</ul>`
+        : `<p class="srcmodal-empty">2030 미래 전망 보드의 메가트렌드를 근거 맥락으로 활용했습니다.</p>`) + boardLink;
+    }
   } else {
     html = `<p class="srcmodal-empty">참고 자료 정보가 없습니다.</p>`;
   }
-  srcModalTitle.textContent = "근거 · " + (SRC_LABEL[src] || src);
+  srcModalTitle.textContent = "근거 · " + (SRC_LABEL[src] || src) + titleSuffix;
   srcModalBody.innerHTML = html;
   srcModal.classList.add("show");
   srcModal.setAttribute("aria-hidden", "false");
@@ -694,11 +740,11 @@ function closeSourceModal() {
 }
 resultsBody.addEventListener("click", (e) => {
   const pill = e.target.closest(".src-pill");
-  if (pill) openSourceModal(pill.dataset.src);
+  if (pill) openSourceModal(pill.dataset.src, pill.dataset.idea != null ? Number(pill.dataset.idea) : null);
 });
 resultsBody.addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("src-pill")) {
-    e.preventDefault(); openSourceModal(e.target.dataset.src);
+    e.preventDefault(); openSourceModal(e.target.dataset.src, e.target.dataset.idea != null ? Number(e.target.dataset.idea) : null);
   }
 });
 document.getElementById("srcModalClose").addEventListener("click", closeSourceModal);
