@@ -80,7 +80,7 @@
   .mode-card.active .mode-name { color: #0071e3; }
   .mode-sub { font-size: 15px; color: #86868b; }
 
-  /* 신규 검색 입력 */
+  /* 웹 검색 입력 */
   .search-input-wrap { margin-top: 8px; display: none; }
   .search-input-wrap.show { display: block; }
   .search-input-wrap input {
@@ -342,9 +342,9 @@
       <button type="button" class="chip active" data-src="mi">Market Sensing</button>
       <button type="button" class="chip active" data-src="2030">2030 미래 전망</button>
       <button type="button" class="chip active" data-src="reports">클로드 작성 워드보고서</button>
-      <button type="button" class="chip" data-src="search">🔎 신규 검색</button>
+      <button type="button" class="chip active" data-src="search">🔎 웹 검색</button>
     </div>
-    <div class="search-input-wrap" id="searchWrap">
+    <div class="search-input-wrap show" id="searchWrap">
       <input type="text" id="searchKeyword" placeholder="검색 키워드 (예 : 북미 빌트인 냉장고 트렌드)">
       <div class="hint">선택 시 웹에서 최신 자료를 추가로 수집해 근거에 반영합니다.</div>
     </div>
@@ -396,11 +396,11 @@
 
 <script>
 const TOPIC_LABEL = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
-const SRC_LABEL = { mi:"Market Sensing", "2030":"2030 미래 전망", reports:"클로드 작성 워드보고서", search:"신규 검색" };
+const SRC_LABEL = { mi:"Market Sensing", "2030":"2030 미래 전망", reports:"클로드 작성 워드보고서", search:"웹 검색" };
 const DIR_LABEL = { sales: "매출 확대", profit: "수익성 강화" };
 
 const selectedTopics = new Set(["consumer", "tech", "rival"]);
-const selectedSources = new Set(["mi", "2030", "reports"]);
+const selectedSources = new Set(["mi", "2030", "reports", "search"]);
 let ideaCount = 3;
 const selectedDirections = new Set(["sales"]);
 let lastSources = { reportSources: null, searchSources: [], miSources: [], trendSources: [] };
