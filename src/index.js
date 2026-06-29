@@ -15,7 +15,7 @@ export default {
     if (url.pathname === "/api/version") {
       return handleVersion(env);
     }
-    if (url.pathname === "/api/changelog") {
+    if (url.pathname === "/changelog.json") {
       return handleChangelog(request, env, ctx);
     }
     // 그 외는 정적 자산
@@ -23,9 +23,9 @@ export default {
   },
 };
 
-// ===== /api/changelog — GitHub main 커밋에서 최근 변경 이력을 동적 생성 =====
+// ===== /changelog.json — GitHub main 커밋에서 최근 변경 이력을 동적 생성 =====
 // 머지되면 자동 반영. 데이터 소스는 GitHub 커밋 Atom 피드(github.com, CDN 캐시·rate-limit-free).
-// 실패 시 정적 public/changelog.json 으로 폴백.
+// 정적 public/changelog.json은 제거됨 → 자산 충돌 없이 이 Worker 핸들러가 처리.
 const CHANGELOG_REPO = "SimpleorNothing/report-idea";
 const CHANGELOG_BRANCH = "main";
 
@@ -69,10 +69,8 @@ async function handleChangelog(request, env, ctx) {
     ctx.waitUntil(cache.put(cacheKey, resp.clone()));
     return resp;
   } catch (e) {
-    // 폴백: 정적 public/changelog.json (수동 큐레이션 안전망)
-    return env.ASSETS.fetch(
-      new Request(new URL("/changelog.json", request.url), request)
-    );
+    // Atom 피드 일시 실패 → 502. 프런트가 /api/version(배포 시각)으로 폴백한다.
+    return json({ error: "changelog feed unavailable" }, 502);
   }
 }
 
