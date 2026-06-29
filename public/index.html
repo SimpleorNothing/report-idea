@@ -702,7 +702,7 @@ function openSourceModal(src, ideaIdx) {
     html = (list.length
       ? (ideaIds ? `<p class="srcmodal-empty">이 아이디어가 근거로 삼은 신호 ${list.length}건입니다.</p>` : ``)
         + `<ul class="srcmodal-list">` + list.map(s => {
-          const tag = [s.lens, s.grade].filter(Boolean).join("·");
+          const tag = s.lens || "";  // 등급(긴급/주시 등)은 판단 근거가 약해 미표시 — 렌즈만
           return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
             + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
         }).join("") + `</ul>`
