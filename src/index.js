@@ -3,6 +3,7 @@
 // - 정적 자산(public/)은 ASSETS 바인딩이 자동 서빙
 // - /api/generate : 보고 주제 생성 (Claude API, web_search 옵션, 업로드 보고서 R2 주입)
 // - /api/version  : 배포 시각 배지 (CF_VERSION_METADATA)
+// - /api/bank     : 아이디어 뱅크 CRUD (R2 samsungda-research, prefix idea-bank/)
 
 export default {
   async fetch(request, env, ctx) {
@@ -14,6 +15,9 @@ export default {
     }
     if (url.pathname === "/api/version") {
       return handleVersion(env);
+    }
+    if (url.pathname === "/api/bank") {
+      return handleBank(request, env);
     }
     if (url.pathname === "/changelog.json") {
       return handleChangelog(request, env, ctx);
@@ -606,6 +610,121 @@ function parseIdeas(textOut, topics) {
       sources: toIds(it.sources),
     };
   }).filter(it => it.title && it.content.length);
+}
+
+// ===== 아이디어 뱅크 (R2: samsungda-research, prefix "idea-bank/") =====
+// 자판기에서 도출한 아이디어를 항목 단위 JSON으로 저장 — 팀 공유.
+// 동시 편집은 항목 단위 last-write-wins → 카드 간 충돌 영향 최소화.
+const BANK_PREFIX = "idea-bank/";
+
+async function handleBank(request, env) {
+  if (!env.RESEARCH) return json({ error: "R2(RESEARCH) 바인딩이 없습니다." }, 500);
+  const method = request.method;
+
+  if (method === "GET") {
+    try {
+      const items = [];
+      let cursor;
+      do {
+        const listed = await env.RESEARCH.list({ prefix: BANK_PREFIX, cursor });
+        for (const o of (listed.objects || [])) {
+          try {
+            const obj = await env.RESEARCH.get(o.key);
+            if (!obj) continue;
+            const rec = await obj.json();
+            if (rec && rec.id) items.push(rec);
+          } catch (e) { /* 손상 항목 skip */ }
+        }
+        cursor = listed.truncated ? listed.cursor : null;
+      } while (cursor);
+      items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return json({ items });
+    } catch (e) {
+      return json({ error: "목록 조회 실패: " + e.message }, 500);
+    }
+  }
+
+  if (method === "POST") {
+    let b;
+    try { b = await request.json(); } catch { return json({ error: "잘못된 요청 형식" }, 400); }
+    const rec = normalizeBankRecord(b);
+    if (!rec.title) return json({ error: "title이 필요합니다." }, 400);
+    rec.id = "ib_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    rec.createdAt = Date.now();
+    rec.date = bankDateKST(rec.createdAt);
+    try {
+      await env.RESEARCH.put(BANK_PREFIX + rec.id + ".json", JSON.stringify(rec), {
+        httpMetadata: { contentType: "application/json; charset=utf-8" },
+      });
+      return json({ ok: true, item: rec });
+    } catch (e) {
+      return json({ error: "저장 실패: " + e.message }, 500);
+    }
+  }
+
+  if (method === "PUT") {
+    let b;
+    try { b = await request.json(); } catch { return json({ error: "잘못된 요청 형식" }, 400); }
+    const id = String(b.id || "").trim();
+    if (!/^ib_[a-z0-9]+$/.test(id)) return json({ error: "유효하지 않은 id" }, 400);
+    const key = BANK_PREFIX + id + ".json";
+    try {
+      const obj = await env.RESEARCH.get(key);
+      if (!obj) return json({ error: "대상을 찾을 수 없습니다." }, 404);
+      const rec = await obj.json();
+      if (typeof b.memo === "string") rec.memo = b.memo.slice(0, 2000);
+      if (Array.isArray(b.tags)) rec.tags = b.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12);
+      rec.updatedAt = Date.now();
+      await env.RESEARCH.put(key, JSON.stringify(rec), {
+        httpMetadata: { contentType: "application/json; charset=utf-8" },
+      });
+      return json({ ok: true, item: rec });
+    } catch (e) {
+      return json({ error: "수정 실패: " + e.message }, 500);
+    }
+  }
+
+  if (method === "DELETE") {
+    const id = String(new URL(request.url).searchParams.get("id") || "").trim();
+    if (!/^ib_[a-z0-9]+$/.test(id)) return json({ error: "유효하지 않은 id" }, 400);
+    try {
+      await env.RESEARCH.delete(BANK_PREFIX + id + ".json");
+      return json({ ok: true });
+    } catch (e) {
+      return json({ error: "삭제 실패: " + e.message }, 500);
+    }
+  }
+
+  return json({ error: "지원하지 않는 메서드" }, 405);
+}
+
+function normalizeBankRecord(b) {
+  const arr = v => Array.isArray(v)
+    ? v.map(x => String(x == null ? "" : x).trim()).filter(Boolean).slice(0, 6)
+    : (v == null || v === "" ? [] : [String(v).trim()].filter(Boolean));
+  const dir = (b.dir === "profit" || b.dir === "sales") ? b.dir : "sales";
+  return {
+    dir,
+    topic: String(b.topic || "").slice(0, 20),
+    title: String(b.title || "").trim().slice(0, 200),
+    content: arr(b.content),
+    opportunity: arr(b.opportunity),
+    threat: arr(b.threat),
+    angle: arr(b.angle),
+    sources: Array.isArray(b.sources)
+      ? [...new Set(b.sources.map(s => String(s).trim().toUpperCase()).filter(s => /^[MTR]\d+$/.test(s)))]
+      : [],
+    tags: Array.isArray(b.tags) ? b.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [],
+    memo: typeof b.memo === "string" ? b.memo.slice(0, 2000) : "",
+    author: String(b.author || "").trim().slice(0, 20),
+  };
+}
+
+function bankDateKST(ts) {
+  const d = new Date(ts);
+  const k = new Date(d.getTime() + 9 * 3600 * 1000);
+  const p = n => String(n).padStart(2, "0");
+  return `${k.getUTCFullYear()}.${p(k.getUTCMonth() + 1)}.${p(k.getUTCDate())}`;
 }
 
 function handleVersion(env) {
