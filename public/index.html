@@ -148,7 +148,7 @@
   }
   @keyframes dispense { to { opacity: 1; transform: translateY(0); } }
   @media (prefers-reduced-motion: reduce) { .idea-card { animation: none; opacity: 1; transform: none; } }
-  .idea-top { display: flex; align-items: flex-start; gap: 10px; }
+  .idea-top { display: flex; align-items: flex-start; gap: 10px; padding-right: 80px; }
   .idea-num {
     flex: none; width: 24px; height: 24px; border-radius: 7px; background: #0071e3; color: #fff;
     font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
@@ -375,7 +375,8 @@
 
   /* 결과 카드 → 뱅크 저장 버튼 */
   .idea-card { position: relative; }
-  .idea-save { position: absolute; top: 14px; right: 16px; font-size: 13px; font-weight: 600; color: #0071e3; background: #eaf4ff; border: none; border-radius: 7px; padding: 5px 10px; cursor: pointer; font-family: inherit; transition: .15s; }
+  .idea-save { position: absolute; top: 14px; right: 16px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #0071e3; background: #eaf4ff; border: none; border-radius: 7px; padding: 5px 10px; cursor: pointer; font-family: inherit; transition: .15s; }
+  .idea-save-ico { flex: none; }
   .idea-save:hover { background: #d8ecff; }
   .idea-save.saved { color: #1a5b30; background: #e7f7ed; cursor: default; }
 
@@ -671,7 +672,7 @@ function render(ideas) {
     card.className = "idea-card";
     card.style.animationDelay = (n * 0.07) + "s";
     card.innerHTML = `
-      <button type="button" class="idea-save" data-idx="${n}">🔖 저장</button>
+      <button type="button" class="idea-save" data-idx="${n}"><svg class="idea-save-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>저장</button>
       <div class="idea-top">
         <div class="idea-num">${n + 1}</div>
         <div>
