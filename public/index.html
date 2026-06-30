@@ -251,12 +251,16 @@
   .srcmodal-link:hover { border-bottom-color: #0071e3; }
 
   .footer-rotator {
-    text-align: center; margin-top: 32px; padding: 16px 0; font-size: 15px; color: #a1a1a6;
+    text-align: right; font-size: 15px; color: #a1a1a6;
     font-style: italic; letter-spacing: 0.2px; transition: opacity 0.6s ease;
   }
   .footer-rotator.fade { opacity: 0; }
+  .footer-row {
+    max-width: 640px; margin: 32px auto 0; padding: 16px 4px 0;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+  }
   .version-badge {
-    max-width: 640px; margin: 16px auto 0; padding: 0 4px; position: relative; text-align: left;
+    position: relative; text-align: left; flex-shrink: 0;
   }
   .vb-btn {
     appearance: none; border: 0; background: transparent; cursor: pointer;
@@ -509,15 +513,17 @@
     <div class="bank-empty hide" id="bankEmpty"></div>
   </div>
 
-  <div class="footer-rotator" id="footerRotator">좋은 보고는 좋은 질문에서 시작됩니다.</div>
 </div>
 
-<div class="version-badge" id="versionBadge">
-  <button class="vb-btn" id="vbBtn" type="button" aria-expanded="false" aria-controls="vbPanel" aria-haspopup="true">update : —</button>
-  <div class="vb-panel" id="vbPanel" role="region" aria-label="최근 변경 이력">
-    <div class="vb-head"><h4>최근 변경 이력</h4><span>최근 5개</span></div>
-    <ul id="vbList"></ul>
+<div class="footer-row">
+  <div class="version-badge" id="versionBadge">
+    <button class="vb-btn" id="vbBtn" type="button" aria-expanded="false" aria-controls="vbPanel" aria-haspopup="true">update : —</button>
+    <div class="vb-panel" id="vbPanel" role="region" aria-label="최근 변경 이력">
+      <div class="vb-head"><h4>최근 변경 이력</h4><span>최근 5개</span></div>
+      <ul id="vbList"></ul>
+    </div>
   </div>
+  <div class="footer-rotator" id="footerRotator">좋은 보고는 좋은 질문에서 시작됩니다.</div>
 </div>
 
 <div class="srcmodal-overlay" id="srcModal" aria-hidden="true">
