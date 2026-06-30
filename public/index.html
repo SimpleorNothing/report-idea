@@ -283,7 +283,8 @@
   .vb-head h4 { margin: 0; font-size: 15px; font-weight: 700; color: #1a1d21;
     font-family: "Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif; letter-spacing: -0.1px; }
   .vb-head span { font-size: 15px; color: #a1a1a6; }
-  .vb-panel ul { list-style: none; margin: 0; padding: 0; }
+  .vb-panel ul { list-style: none; margin: 0; padding: 0;
+    max-height: min(320px, 50vh); overflow-y: auto; overscroll-behavior: contain; }
   .vb-panel li { padding: 11px 12px; border-radius: 10px; border-left: 2px solid transparent; }
   .vb-panel li:hover { background: #f6f7f9; border-left-color: #0071e3; }
   .vb-panel li + li { margin-top: 2px; }
@@ -519,7 +520,7 @@
   <div class="version-badge" id="versionBadge">
     <button class="vb-btn" id="vbBtn" type="button" aria-expanded="false" aria-controls="vbPanel" aria-haspopup="true">update : —</button>
     <div class="vb-panel" id="vbPanel" role="region" aria-label="최근 변경 이력">
-      <div class="vb-head"><h4>최근 변경 이력</h4><span>최근 5개</span></div>
+      <div class="vb-head"><h4>최근 변경 이력</h4><span id="vbCount">전체</span></div>
       <ul id="vbList"></ul>
     </div>
   </div>
@@ -1015,6 +1016,7 @@ loadBank();
   const btn = document.getElementById("vbBtn");
   const panel = document.getElementById("vbPanel");
   const list = document.getElementById("vbList");
+  const count = document.getElementById("vbCount");
   const dot = s => String(s).replace(/-/g, ".");
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1031,7 +1033,8 @@ loadBank();
       const e = (d && d.entries) || [];
       if (!e.length) { fallback(); return; }
       btn.textContent = "update : " + dot(e[0].date);  // 배지엔 최신 연월일만
-      list.innerHTML = e.slice(0, 5).map(c =>
+      if (count) count.textContent = "전체 " + e.length + "개";
+      list.innerHTML = e.map(c =>
         '<li><div class="vb-time">' + dot(c.date) + " " + esc(c.time) + "</div>" +
         '<div class="vb-desc">' + esc(c.desc) + "</div></li>").join("");
       btn.addEventListener("click", ev => { ev.stopPropagation(); setOpen(btn.getAttribute("aria-expanded") !== "true"); });

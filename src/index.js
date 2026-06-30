@@ -60,7 +60,7 @@ async function handleChangelog(request, env, ctx) {
       const { date, time } = toKST(um[1].trim());
       if (!date) continue;
       entries.push({ date, time, desc });
-      if (entries.length >= 5) break;
+      // 캡 없음 — Atom 피드가 제공하는 파악 가능한 변경 이력을 모두 포함(프런트에서 스크롤)
     }
     if (!entries.length) throw new Error("empty");
 
