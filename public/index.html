@@ -122,9 +122,11 @@
   .results-head.show { display: flex; }
   .results-head .rtitle { font-size: 15px; font-weight: 700; }
   .results-head .rmeta { font-size: 15px; color: #86868b; margin-top: 2px; }
+  .head-actions { display: flex; gap: 6px; flex: none; }
   .copy-all {
-    font-size: 15px; font-weight: 600; color: #0071e3; background: #eaf4ff;
-    border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 600; color: #0071e3; background: #eaf4ff;
+    border: none; border-radius: 7px; padding: 5px 9px; cursor: pointer; font-family: inherit;
+    white-space: nowrap; transition: .15s;
   }
   .copy-all:hover { background: #d8ecff; }
 
@@ -148,7 +150,7 @@
   }
   @keyframes dispense { to { opacity: 1; transform: translateY(0); } }
   @media (prefers-reduced-motion: reduce) { .idea-card { animation: none; opacity: 1; transform: none; } }
-  .idea-top { display: flex; align-items: flex-start; gap: 10px; padding-right: 80px; }
+  .idea-top { display: flex; align-items: flex-start; gap: 10px; padding-right: 132px; }
   .idea-num {
     flex: none; width: 24px; height: 24px; border-radius: 7px; background: #0071e3; color: #fff;
     font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
@@ -375,10 +377,18 @@
 
   /* 결과 카드 → 뱅크 저장 버튼 */
   .idea-card { position: relative; }
-  .idea-save { position: absolute; top: 14px; right: 16px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #0071e3; background: #eaf4ff; border: none; border-radius: 7px; padding: 5px 10px; cursor: pointer; font-family: inherit; transition: .15s; }
-  .idea-save-ico { flex: none; }
-  .idea-save:hover { background: #d8ecff; }
+  .idea-actions { position: absolute; top: 14px; right: 16px; display: flex; gap: 5px; }
+  .idea-act { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: #0071e3; background: #eaf4ff; border: none; border-radius: 7px; padding: 5px 8px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: .15s; }
+  .idea-act:hover { background: #d8ecff; }
+  .idea-act.done { color: #1a5b30; background: #e7f7ed; }
+  .idea-act-ico { flex: none; }
   .idea-save.saved { color: #1a5b30; background: #e7f7ed; cursor: default; }
+  /* 좁은 화면 — 카드 버튼은 아이콘만 노출해 제목 폭 확보 */
+  @media (max-width: 560px) {
+    .idea-top { padding-right: 82px; }
+    .idea-act { padding: 5px 7px; }
+    .idea-act .lbl { display: none; }
+  }
 
   /* 토스트 */
   .bank-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(16px); background: #1d1d1f; color: #fff; font-size: 14px; padding: 11px 18px; border-radius: 10px; opacity: 0; pointer-events: none; transition: .25s; box-shadow: 0 8px 24px rgba(0,0,0,.18); z-index: 200; }
@@ -480,7 +490,10 @@
         <div class="rtitle">생성된 보고 주제</div>
         <div class="rmeta" id="resultsMeta"></div>
       </div>
-      <button type="button" class="copy-all" id="copyAll">전체 복사</button>
+      <div class="head-actions">
+        <button type="button" class="copy-all" id="copyAll">전체 복사</button>
+        <button type="button" class="copy-all" id="saveAll">전체 저장</button>
+      </div>
     </div>
     <div id="reportNote" class="report-note"></div>
     <div id="resultsBody"></div>
@@ -672,7 +685,10 @@ function render(ideas) {
     card.className = "idea-card";
     card.style.animationDelay = (n * 0.07) + "s";
     card.innerHTML = `
-      <button type="button" class="idea-save" data-idx="${n}"><svg class="idea-save-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>저장</button>
+      <div class="idea-actions">
+        <button type="button" class="idea-act idea-copy" data-idx="${n}" title="복사" aria-label="복사"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="lbl">복사</span></button>
+        <button type="button" class="idea-act idea-save" data-idx="${n}" title="저장" aria-label="저장"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="lbl">저장</span></button>
+      </div>
       <div class="idea-top">
         <div class="idea-num">${n + 1}</div>
         <div>
@@ -744,24 +760,66 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
+function markSaved(sb) {
+  sb.classList.add("saved");
+  sb.title = "저장됨";
+  sb.setAttribute("aria-label", "저장됨");
+  sb.innerHTML = '<svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span class="lbl">저장됨</span>';
+}
+
+function cardToText(c, i) {
+  const title = c.querySelector(".idea-title").textContent.trim();
+  const tag = c.querySelector(".idea-tag").textContent.trim();
+  const lines = sel => [...c.querySelectorAll(sel + " ul.bl li")].map(li => li.textContent.trim()).filter(Boolean);
+  const sect = (label, arr) => arr.length ? `\n  [${label}]\n` + arr.map(s => `   - ${s}`).join("\n") : "";
+  let out = `${i + 1}. [${tag}] ${title}`;
+  out += sect("내용", lines(".idea-content"));
+  out += sect("당사 기회", lines(".otbox.opp"));
+  out += sect("당사 위협", lines(".otbox.thr"));
+  out += sect("보고서 방향", lines(".idea-angle"));
+  return out;
+}
+
 document.getElementById("copyAll").addEventListener("click", () => {
-  const text = [...resultsBody.querySelectorAll(".idea-card")].map((c, i) => {
-    const title = c.querySelector(".idea-title").textContent.trim();
-    const tag = c.querySelector(".idea-tag").textContent.trim();
-    const lines = sel => [...c.querySelectorAll(sel + " ul.bl li")].map(li => li.textContent.trim()).filter(Boolean);
-    const sect = (label, arr) => arr.length ? `\n  [${label}]\n` + arr.map(s => `   - ${s}`).join("\n") : "";
-    let out = `${i + 1}. [${tag}] ${title}`;
-    out += sect("내용", lines(".idea-content"));
-    out += sect("당사 기회", lines(".otbox.opp"));
-    out += sect("당사 위협", lines(".otbox.thr"));
-    out += sect("보고서 방향", lines(".idea-angle"));
-    return out;
-  }).join("\n\n");
+  const text = [...resultsBody.querySelectorAll(".idea-card")].map((c, i) => cardToText(c, i)).join("\n\n");
   navigator.clipboard.writeText(text).then(() => {
     const b = document.getElementById("copyAll");
     b.textContent = "복사됨 ✓";
     setTimeout(() => b.textContent = "전체 복사", 1500);
   });
+});
+
+document.getElementById("saveAll").addEventListener("click", async () => {
+  const b = document.getElementById("saveAll");
+  if (b.disabled) return;
+  const pending = [...resultsBody.querySelectorAll(".idea-card")]
+    .map(c => c.querySelector(".idea-save"))
+    .filter(sb => sb && !sb.classList.contains("saved"));
+  if (!pending.length) { bankToast("이미 모두 저장됐어요"); return; }
+  b.disabled = true;
+  const orig = b.textContent;
+  b.textContent = "저장中…";
+  let ok = 0;
+  for (const sb of pending) {
+    const idea = lastIdeas[parseInt(sb.dataset.idx)];
+    if (!idea) continue;
+    try {
+      const res = await fetch("/api/bank", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dir: lastDirForSave, topic: idea.topic, title: idea.title,
+          content: toArr(idea.content), opportunity: toArr(idea.opportunity),
+          threat: toArr(idea.threat), angle: toArr(idea.angle),
+          sources: toArr(idea.sources),
+        }),
+      });
+      if (res.ok) { markSaved(sb); ok++; }
+    } catch (e) {}
+  }
+  await loadBank();
+  bankToast(ok ? `${ok}개 아이디어를 뱅크에 저장했어요` : "전체 저장 실패 — 잠시 후 다시 시도해주세요");
+  b.textContent = ok === pending.length ? "저장됨 ✓" : orig;
+  setTimeout(() => { b.textContent = orig; b.disabled = false; }, 1500);
 });
 
 const footerMessages = [
@@ -851,6 +909,21 @@ function renderBank() {
   }).join("");
 }
 
+// 결과 카드 → 복사 (이벤트 위임)
+resultsBody.addEventListener("click", (e) => {
+  const cp = e.target.closest(".idea-copy");
+  if (!cp) return;
+  const card = cp.closest(".idea-card");
+  const i = [...resultsBody.querySelectorAll(".idea-card")].indexOf(card);
+  navigator.clipboard.writeText(cardToText(card, i)).then(() => {
+    const lbl = cp.querySelector(".lbl");
+    const o = lbl ? lbl.textContent : "";
+    if (lbl) lbl.textContent = "복사됨";
+    cp.classList.add("done");
+    setTimeout(() => { if (lbl) lbl.textContent = o; cp.classList.remove("done"); }, 1500);
+  });
+});
+
 // 결과 카드 → 저장 (이벤트 위임)
 resultsBody.addEventListener("click", async (e) => {
   const sb = e.target.closest(".idea-save");
@@ -870,7 +943,7 @@ resultsBody.addEventListener("click", async (e) => {
       }),
     });
     if (!res.ok) throw new Error("save " + res.status);
-    sb.classList.add("saved"); sb.textContent = "✓ 저장됨";
+    markSaved(sb);
     await loadBank();
     bankToast("아이디어 뱅크에 저장됐어요");
   } catch (err) {
