@@ -1035,7 +1035,7 @@ loadBank();
       btn.textContent = "update : " + dot(e[0].date);  // 배지엔 최신 연월일만
       if (count) count.textContent = "전체 " + e.length + "개";
       list.innerHTML = e.map(c =>
-        '<li><div class="vb-time">' + dot(c.date) + " " + esc(c.time) + "</div>" +
+        '<li><div class="vb-time">' + dot(c.date) + "</div>" +
         '<div class="vb-desc">' + esc(c.desc) + "</div></li>").join("");
       btn.addEventListener("click", ev => { ev.stopPropagation(); setOpen(btn.getAttribute("aria-expanded") !== "true"); });
       document.addEventListener("click", ev => { if (!panel.contains(ev.target) && ev.target !== btn) setOpen(false); });
