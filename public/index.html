@@ -409,6 +409,11 @@
   .bm-badge.profit { background: #f0f0f2; color: #6e6e73; }
   .bm-topic { font-size: 11.5px; font-weight: 600; color: #86868b; }
   .bmodal-head h3 { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.4; color: #1d1d1f; letter-spacing: -0.2px; }
+  /* 상단 우측 액션 — 복사 버튼과 닫기(×) 버튼을 넉넉히 띄워 오조작 방지 */
+  .bmodal-actions { flex: none; display: flex; align-items: center; gap: 18px; }
+  .bmodal-copy { display: inline-flex; align-items: center; gap: 4px; flex: none; border: none; background: #eaf4ff; color: #0071e3; height: 28px; padding: 0 11px; border-radius: 8px; font-size: 12.5px; font-weight: 700; line-height: 1; cursor: pointer; font-family: inherit; white-space: nowrap; transition: .15s; }
+  .bmodal-copy:hover { background: #d8ecff; }
+  .bmodal-copy.done { background: #e7f7ed; color: #1a5b30; }
   .bmodal-close { flex: none; border: none; background: #f0f0f2; color: #6e6e73; width: 28px; height: 28px; border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer; }
   .bmodal-close:hover { background: #e8e8ed; color: #1d1d1f; }
   .bmodal-body { padding: 16px 20px 20px; overflow-y: auto; }
@@ -562,7 +567,13 @@
         <div class="bm-badges" id="bankModalBadges"></div>
         <h3 id="bankModalTitle"></h3>
       </div>
-      <button class="bmodal-close" id="bankModalClose" aria-label="닫기">×</button>
+      <div class="bmodal-actions">
+        <button class="bmodal-copy" id="bankModalCopy" type="button" aria-label="내용 복사">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="lbl">복사</span>
+        </button>
+        <button class="bmodal-close" id="bankModalClose" aria-label="닫기">×</button>
+      </div>
     </div>
     <div class="bmodal-body" id="bankModalBody"></div>
   </div>
@@ -1047,9 +1058,11 @@ async function bankPut(id, patch) {
 
 // 뱅크 카드 → 저장 당시 전체 내용 상세 모달
 const bankModal = document.getElementById("bankModal");
+let bankModalCurrent = null;
 function openBankDetail(id) {
   const x = bankData.find(r => r.id === id);
   if (!x) return;
+  bankModalCurrent = x;
   const blSec = (label, arr, cls) => {
     const a = (arr || []).map(s => String(s == null ? "" : s).trim()).filter(Boolean);
     if (!a.length) return "";
@@ -1082,6 +1095,33 @@ function closeBankDetail() {
 }
 document.getElementById("bankModalClose").addEventListener("click", closeBankDetail);
 bankModal.addEventListener("click", (e) => { if (e.target === bankModal) closeBankDetail(); });
+
+// 상세 모달 내용 복사
+function bankIdeaToText(x) {
+  const sect = (label, arr) => {
+    const a = (arr || []).map(s => String(s == null ? "" : s).trim()).filter(Boolean);
+    return a.length ? `\n[${label}]\n` + a.map(s => `- ${s}`).join("\n") : "";
+  };
+  let out = (x.title || "").trim();
+  out += sect("내용", x.content);
+  out += sect("당사 기회", x.opportunity);
+  out += sect("당사 위협", x.threat);
+  out += sect("보고서 방향", x.angle);
+  if ((x.tags || []).length) out += `\n\n태그: ${x.tags.map(t => "#" + t).join(" ")}`;
+  if (x.memo) out += `\n메모: ${x.memo}`;
+  return out;
+}
+document.getElementById("bankModalCopy").addEventListener("click", () => {
+  if (!bankModalCurrent) return;
+  const btn = document.getElementById("bankModalCopy");
+  const lbl = btn.querySelector(".lbl");
+  navigator.clipboard.writeText(bankIdeaToText(bankModalCurrent)).then(() => {
+    btn.classList.add("done");
+    if (lbl) lbl.textContent = "복사됨";
+    bankToast("내용을 복사했어요");
+    setTimeout(() => { btn.classList.remove("done"); if (lbl) lbl.textContent = "복사"; }, 1500);
+  }).catch(() => bankToast("복사 실패"));
+});
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeBankDetail(); });
 
 bankQuery.addEventListener("input", renderBank);
