@@ -675,6 +675,7 @@ async function handleBank(request, env) {
       const rec = await obj.json();
       if (typeof b.memo === "string") rec.memo = b.memo.slice(0, 2000);
       if (Array.isArray(b.tags)) rec.tags = b.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12);
+      if (typeof b.starred === "boolean") rec.starred = b.starred;
       rec.updatedAt = Date.now();
       await env.RESEARCH.put(key, JSON.stringify(rec), {
         httpMetadata: { contentType: "application/json; charset=utf-8" },
@@ -717,6 +718,7 @@ function normalizeBankRecord(b) {
       : [],
     tags: Array.isArray(b.tags) ? b.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [],
     memo: typeof b.memo === "string" ? b.memo.slice(0, 2000) : "",
+    starred: b.starred === true,
     author: String(b.author || "").trim().slice(0, 20),
   };
 }

@@ -341,7 +341,7 @@
   .bcard { position: relative; background: #fff; border: 1px solid #e8e8ed; border-radius: 14px; padding: 16px 16px 14px; transition: .15s; display: flex; flex-direction: column; }
   .bcard:hover { border-color: #0071e3; box-shadow: 0 4px 18px rgba(0,113,227,.10); }
   .bcard:hover .bc-del { opacity: 1; }
-  .bc-top { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+  .bc-top { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; padding-right: 56px; }
   .bc-badge { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: #eaf4ff; color: #0071e3; }
   .bc-badge.profit { background: #f0f0f2; color: #6e6e73; }
   .bc-tag-topic { font-size: 11.5px; font-weight: 600; color: #86868b; }
@@ -365,8 +365,12 @@
   .bc-meta { margin-top: 12px; padding-top: 11px; border-top: 1px solid #f0f0f2; font-size: 12.5px; color: #a1a1a6; display: flex; align-items: center; gap: 6px; }
   .bc-who { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; }
   .bc-avatar { width: 17px; height: 17px; border-radius: 50%; background: #eaf4ff; color: #0071e3; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
-  .bc-del { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px; border: none; background: #f0f0f2; color: #86868b; font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: .12s; display: flex; align-items: center; justify-content: center; }
+  .bc-del { position: absolute; top: 12px; right: 40px; width: 22px; height: 22px; border-radius: 6px; border: none; background: #f0f0f2; color: #86868b; font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: .12s; display: flex; align-items: center; justify-content: center; }
   .bc-del:hover { background: #ffe1e1; color: #c0392b; }
+  .bc-star { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 6px; border: none; background: transparent; color: #c9c9ce; font-size: 15px; line-height: 1; cursor: pointer; transition: .12s; display: flex; align-items: center; justify-content: center; }
+  .bc-star:hover { background: #fff7e0; color: #f0a500; }
+  .bc-star.on { color: #f5a623; }
+  .bf-chip-star.on { background: #fff4d6; color: #b8860b; }
 
   .bank-empty { border: 1px dashed #e3e3e8; border-radius: 14px; padding: 36px 20px; text-align: center; color: #a1a1a6; font-size: 14px; line-height: 1.7; }
   .bank-empty b { display: block; color: #6e6e73; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
@@ -520,6 +524,7 @@
       <button type="button" class="bf-chip on" data-f="all">전체</button>
       <button type="button" class="bf-chip" data-f="sales">매출 확대</button>
       <button type="button" class="bf-chip" data-f="profit">수익성 강화</button>
+      <button type="button" class="bf-chip bf-chip-star" data-f="starred">★ 별표만</button>
     </div>
 
     <div class="bank-grid" id="bankGrid"></div>
@@ -863,7 +868,8 @@ function renderBank() {
   const q = bankQuery.value.trim().toLowerCase();
   bankCount.textContent = bankData.length ? `${bankData.length}건` : "";
   const list = bankData.filter(x => {
-    if (bankFilter !== "all" && x.dir !== bankFilter) return false;
+    if (bankFilter === "starred") { if (!x.starred) return false; }
+    else if (bankFilter !== "all" && x.dir !== bankFilter) return false;
     if (!q) return true;
     const hay = [x.title, (x.content||[]).join(" "), (x.opportunity||[]).join(" "),
       (x.threat||[]).join(" "), (x.angle||[]).join(" "), x.memo||"", (x.tags||[]).join(" ")]
@@ -892,6 +898,7 @@ function renderBank() {
     const author = x.author ? `<span class="bc-who"><span class="bc-avatar">${esc(x.author[0])}</span>${esc(x.author)}</span>` : "";
     return `
       <div class="bcard" data-id="${x.id}">
+        <button type="button" class="bc-star${x.starred?' on':''}" data-act="star" data-id="${x.id}" title="${x.starred?'별표 해제':'별표'}" aria-label="${x.starred?'별표 해제':'별표'}" aria-pressed="${x.starred?'true':'false'}">${x.starred?'★':'☆'}</button>
         <button type="button" class="bc-del" title="삭제" data-act="del" data-id="${x.id}">×</button>
         <div class="bc-top">
           <span class="bc-badge ${x.dir==='profit'?'profit':''}">${DIR_BADGE[x.dir]||""}</span>
@@ -957,7 +964,10 @@ bankGrid.addEventListener("click", async (e) => {
     return;
   }
   const act = t.dataset.act, id = t.dataset.id;
-  if (act === "del") {
+  if (act === "star") {
+    const rec = bankData.find(x => x.id === id); if (!rec) return;
+    await bankPut(id, { starred: !rec.starred });
+  } else if (act === "del") {
     if (!confirm("이 아이디어를 뱅크에서 삭제할까요?")) return;
     try {
       const res = await fetch("/api/bank?id=" + encodeURIComponent(id), { method: "DELETE" });
