@@ -206,9 +206,13 @@ ${detailRule}`;
   userParts.push(`\n[topic 값] 각 아이디어의 "topic" 필드는 다음 중 선택한 주제에 해당하는 값만 사용: ${topics.map(t=>`"${t}"`).join(", ")}.`);
   userParts.push(`\n반드시 JSON 배열만 출력하라. 마크다운 코드펜스나 설명 문장 없이, [ 로 시작해 ] 로 끝나는 JSON 배열 하나만 출력한다.`);
 
+  // 아이디어 1건은 title/topic/sources + content·opportunity·threat·angle(각 최대 3 bullet)로
+  // 한국어 기준 대략 700~900 토큰. count가 크면 4096으로는 JSON이 중간에 잘려(max_tokens)
+  // 파싱이 실패한다 → 개수에 비례해 넉넉히 잡고, sonnet 한도 내에서 상한을 둔다.
+  const maxTokens = Math.min(16000, 3000 + count * 1600);
   const reqBody = {
     model: "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: maxTokens,
     system,
     messages: [{ role: "user", content: userParts.join("\n") }],
   };
@@ -572,14 +576,42 @@ function collectSearchSources(content) {
   return out;
 }
 
+// 잘린 JSON 문자열에서 최상위 완성 객체({...})만 순차 복구한다.
+// max_tokens로 배열이 중간에 끊겨도 이미 완성된 앞쪽 아이디어는 살릴 수 있다.
+function salvageObjects(s) {
+  const out = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; }
+    else if (c === "{") { if (depth === 0) start = i; depth++; }
+    else if (c === "}") {
+      if (depth > 0 && --depth === 0 && start !== -1) {
+        try { out.push(JSON.parse(s.slice(start, i + 1))); } catch { /* 불완전 객체 skip */ }
+        start = -1;
+      }
+    }
+  }
+  return out;
+}
+
 function parseIdeas(textOut, topics) {
   let clean = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
   const s = clean.indexOf("[");
+  if (s !== -1) clean = clean.slice(s);
   const e = clean.lastIndexOf("]");
-  if (s !== -1 && e !== -1 && e > s) clean = clean.slice(s, e + 1);
-  let arr;
-  try { arr = JSON.parse(clean); } catch { return []; }
-  if (!Array.isArray(arr)) return [];
+  let arr = null;
+  // 정상(완결) JSON 우선 시도
+  if (e > 0) { try { arr = JSON.parse(clean.slice(0, e + 1)); } catch { /* 아래서 복구 */ } }
+  // 잘린 응답 → 완성된 객체만이라도 복구
+  if (!Array.isArray(arr)) arr = salvageObjects(clean);
+  if (!Array.isArray(arr) || !arr.length) return [];
 
   const toBullets = v => {
     let list;
