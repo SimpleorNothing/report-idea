@@ -338,9 +338,10 @@
   .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 480px) { .bank-grid { grid-template-columns: 1fr; } }
 
-  .bcard { position: relative; background: #fff; border: 1px solid #e8e8ed; border-radius: 14px; padding: 16px 16px 14px; transition: .15s; display: flex; flex-direction: column; }
+  .bcard { position: relative; background: #fff; border: 1px solid #e8e8ed; border-radius: 14px; padding: 16px 16px 14px; transition: .15s; display: flex; flex-direction: column; -webkit-touch-callout: none; }
   .bcard:hover { border-color: #0071e3; box-shadow: 0 4px 18px rgba(0,113,227,.10); }
-  .bcard:hover .bc-del { opacity: 1; }
+  .bcard.armed { border-color: #0071e3; box-shadow: 0 4px 18px rgba(0,113,227,.10); }
+  .bcard.armed .bc-del { opacity: 1; }
   .bc-top { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; padding-right: 56px; }
   .bc-badge { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: #eaf4ff; color: #0071e3; }
   .bc-badge.profit { background: #f0f0f2; color: #6e6e73; }
@@ -865,6 +866,7 @@ async function loadBank() {
 }
 
 function renderBank() {
+  armedCard = null;
   const q = bankQuery.value.trim().toLowerCase();
   bankCount.textContent = bankData.length ? `${bankData.length}건` : "";
   const list = bankData.filter(x => {
@@ -956,7 +958,40 @@ resultsBody.addEventListener("click", async (e) => {
 });
 
 // 뱅크 카드 인터랙션 (이벤트 위임)
+// 삭제(×) 버튼은 카드를 "길게 눌러야" 노출 — hover 오노출로 인한 오클릭 방지
+let armedCard = null, lpTimer = null, lpXY = null, lpJustFired = false;
+const LP_MS = 450, LP_MOVE = 10;
+function disarmCard() { if (armedCard) { armedCard.classList.remove("armed"); armedCard = null; } }
+function cancelLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+bankGrid.addEventListener("pointerdown", (e) => {
+  lpJustFired = false;
+  // 별표·태그·메모 등 인터랙션 요소 위에서는 길게누르기 시작 안 함
+  if (e.target.closest("[data-act], textarea, a")) return;
+  const card = e.target.closest(".bcard");
+  if (!card) return;
+  lpXY = { x: e.clientX, y: e.clientY };
+  cancelLongPress();
+  lpTimer = setTimeout(() => {
+    lpTimer = null; lpJustFired = true;
+    if (armedCard && armedCard !== card) armedCard.classList.remove("armed");
+    card.classList.add("armed"); armedCard = card;
+  }, LP_MS);
+});
+bankGrid.addEventListener("pointermove", (e) => {
+  if (!lpTimer || !lpXY) return;
+  if (Math.abs(e.clientX - lpXY.x) > LP_MOVE || Math.abs(e.clientY - lpXY.y) > LP_MOVE) cancelLongPress();
+});
+bankGrid.addEventListener("pointerup", cancelLongPress);
+bankGrid.addEventListener("pointercancel", cancelLongPress);
+bankGrid.addEventListener("pointerleave", cancelLongPress);
+// 노출된 카드 밖을 누르면 삭제 버튼 다시 숨김
+document.addEventListener("pointerdown", (e) => {
+  if (armedCard && !armedCard.contains(e.target)) disarmCard();
+});
+
 bankGrid.addEventListener("click", async (e) => {
+  // 길게눌러 삭제 버튼을 띄운 직후의 클릭은 상세 열기로 이어지지 않게 무시
+  if (lpJustFired && !e.target.closest("[data-act]")) { lpJustFired = false; return; }
   const t = e.target.closest("[data-act]");
   if (!t) {
     const card = e.target.closest(".bcard");
@@ -972,6 +1007,7 @@ bankGrid.addEventListener("click", async (e) => {
     try {
       const res = await fetch("/api/bank?id=" + encodeURIComponent(id), { method: "DELETE" });
       if (!res.ok) throw new Error();
+      armedCard = null;
       bankData = bankData.filter(x => x.id !== id); renderBank();
     } catch { bankToast("삭제 실패"); }
   } else if (act === "untag") {
