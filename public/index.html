@@ -80,11 +80,9 @@
   .mode-card.active .mode-name { color: #0071e3; }
   .mode-sub { font-size: 15px; color: #86868b; }
 
-  /* 웹 검색 입력 */
-  .search-input-wrap { margin-top: 8px; display: none; }
-  .search-input-wrap.show { display: block; }
-  .search-input-wrap input {
-    width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px;
+  /* 주제 입력 */
+  .topic-input {
+    width: 100%; margin-top: 8px; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px;
     font-size: 15px; font-family: inherit; background: #fff;
   }
   .hint { font-size: 15px; color: #86868b; margin-top: 6px; }
@@ -460,19 +458,19 @@
       <button type="button" class="chip active" data-topic="rival"><span class="em">🎯</span>경쟁사</button>
     </div>
 
-    <label>③ 데이터 소스 <span class="sublabel">복수 선택 가능</span></label>
+    <label>③ 주제 입력 <span class="sublabel">선택</span></label>
+    <input type="text" id="topicInput" class="topic-input" placeholder="예 : 북미 빌트인 냉장고 트렌드">
+    <div class="hint">뽑고 싶은 보고서 주제를 직접 입력하세요. 입력하지 않으면 클로드가 주제를 제안합니다.</div>
+
+    <label>④ 데이터 소스 <span class="sublabel">복수 선택 가능</span></label>
     <div class="source-grid" id="sourceRow">
       <button type="button" class="chip active" data-src="mi">Market Sensing</button>
       <button type="button" class="chip active" data-src="2030">2030 미래 전망</button>
       <button type="button" class="chip active" data-src="reports">클로드 작성 워드보고서</button>
       <button type="button" class="chip active" data-src="search">🔎 웹 검색</button>
     </div>
-    <div class="search-input-wrap show" id="searchWrap">
-      <input type="text" id="searchKeyword" placeholder="검색 키워드 (예 : 북미 빌트인 냉장고 트렌드)">
-      <div class="hint">선택 시 웹에서 최신 자료를 추가로 수집해 근거에 반영합니다.</div>
-    </div>
 
-    <label>④ 생성 개수</label>
+    <label>⑤ 생성 개수</label>
     <div class="page-row">
       <button type="button" class="page-btn" data-delta="-1">−</button>
       <div class="page-display"><span id="countDisplay">3</span></div>
@@ -593,7 +591,6 @@ document.querySelectorAll("#sourceRow .chip").forEach(chip => {
     const s = chip.dataset.src;
     if (selectedSources.has(s)) { selectedSources.delete(s); chip.classList.remove("active"); }
     else { selectedSources.add(s); chip.classList.add("active"); }
-    document.getElementById("searchWrap").classList.toggle("show", selectedSources.has("search"));
   });
 });
 
@@ -723,7 +720,7 @@ form.addEventListener("submit", async (e) => {
     count: ideaCount,
     directions: [...selectedDirections],
     sources: [...selectedSources],
-    keyword: document.getElementById("searchKeyword").value.trim()
+    keyword: document.getElementById("topicInput").value.trim()
   };
 
   try {

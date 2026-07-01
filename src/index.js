@@ -200,6 +200,7 @@ ${detailRule}`;
   if (miBlock) userParts.push(`\n${miBlock}`);
   if (trendBlock) userParts.push(`\n${trendBlock}`);
   if (reportBlock) userParts.push(`\n${reportBlock}`);
+  if (keyword) userParts.push(`\n[지정 주제 — 반영 필수] "${keyword}" — 생성하는 모든 아이디어는 이 주제와 직접 연관되어야 한다.`);
   if (useSearch && keyword) userParts.push(`\n[신규 검색 키워드] ${keyword} — 웹 검색으로 최신 동향을 반영하라.`);
   else if (useSearch)        userParts.push(`\n[신규 검색] 선택된 주제 영역의 최신 동향을 웹 검색으로 반영하라.`);
   userParts.push(`\n[topic 값] 각 아이디어의 "topic" 필드는 다음 중 선택한 주제에 해당하는 값만 사용: ${topics.map(t=>`"${t}"`).join(", ")}.`);
