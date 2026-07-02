@@ -148,7 +148,7 @@
   }
   @keyframes dispense { to { opacity: 1; transform: translateY(0); } }
   @media (prefers-reduced-motion: reduce) { .idea-card { animation: none; opacity: 1; transform: none; } }
-  .idea-top { display: flex; align-items: flex-start; gap: 10px; padding-right: 208px; }
+  .idea-top { display: flex; align-items: flex-start; gap: 10px; }
   .idea-num {
     flex: none; width: 24px; height: 24px; border-radius: 7px; background: #0071e3; color: #fff;
     font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
@@ -380,17 +380,16 @@
 
   /* 결과 카드 → 뱅크 저장 버튼 */
   .idea-card { position: relative; }
-  .idea-actions { position: absolute; top: 14px; right: 16px; display: flex; gap: 5px; }
+  .idea-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .idea-foot .src-foot { margin-top: 0; }
+  .idea-actions { display: flex; gap: 5px; justify-content: flex-end; }
   .idea-act { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: #0071e3; background: #eaf4ff; border: none; border-radius: 7px; padding: 5px 8px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: .15s; }
   .idea-act:hover { background: #d8ecff; }
   .idea-act.done { color: #1a5b30; background: #e7f7ed; }
   .idea-act-ico { flex: none; }
   .idea-save.saved { color: #1a5b30; background: #e7f7ed; cursor: default; }
-  /* 좁은 화면 — 카드 버튼은 아이콘만 노출해 제목 폭 확보 */
   @media (max-width: 560px) {
-    .idea-top { padding-right: 112px; }
     .idea-act { padding: 5px 7px; }
-    .idea-act .lbl { display: none; }
   }
 
   /* 토스트 */
@@ -699,11 +698,6 @@ function render(ideas) {
     card.className = "idea-card";
     card.style.animationDelay = (n * 0.07) + "s";
     card.innerHTML = `
-      <div class="idea-actions">
-        <button type="button" class="idea-act idea-copy" data-idx="${n}" title="복사" aria-label="복사"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="lbl">복사</span></button>
-        <button type="button" class="idea-act idea-save" data-idx="${n}" title="저장" aria-label="저장"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="lbl">저장</span></button>
-        <button type="button" class="idea-act idea-send" data-idx="${n}" title="보고서 자판기로 보내기" aria-label="보고서 자판기로 보내기"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M21 3 10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><span class="lbl">보고서</span></button>
-      </div>
       <div class="idea-top">
         <div class="idea-num">${n + 1}</div>
         <div>
@@ -714,7 +708,14 @@ function render(ideas) {
       <div class="idea-content"><div class="fl">내용</div>${bullets(idea.content)}</div>
       ${otRow}
       ${angle}
-      <div class="src-foot">근거 : ${srcPills(idea, n)}</div>`;
+      <div class="idea-foot">
+        <div class="src-foot">근거 : ${srcPills(idea, n)}</div>
+        <div class="idea-actions">
+          <button type="button" class="idea-act idea-copy" data-idx="${n}" title="복사" aria-label="복사"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="lbl">복사</span></button>
+          <button type="button" class="idea-act idea-save" data-idx="${n}" title="저장" aria-label="저장"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="lbl">저장</span></button>
+          <button type="button" class="idea-act idea-send" data-idx="${n}" title="보고서 자판기로 보내기" aria-label="보고서 자판기로 보내기"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M21 3 10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><span class="lbl">보고서</span></button>
+        </div>
+      </div>`;
     resultsBody.appendChild(card);
   });
   resultsMeta.textContent = `${ideas.length}개 · ${[...selectedDirections].map(d=>DIR_LABEL[d]).join("·")} · 주제 ${[...selectedTopics].map(t=>TOPIC_LABEL[t]).join("·")}`;
