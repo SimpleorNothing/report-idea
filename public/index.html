@@ -148,7 +148,7 @@
   }
   @keyframes dispense { to { opacity: 1; transform: translateY(0); } }
   @media (prefers-reduced-motion: reduce) { .idea-card { animation: none; opacity: 1; transform: none; } }
-  .idea-top { display: flex; align-items: flex-start; gap: 10px; padding-right: 132px; }
+  .idea-top { display: flex; align-items: flex-start; gap: 10px; padding-right: 208px; }
   .idea-num {
     flex: none; width: 24px; height: 24px; border-radius: 7px; background: #0071e3; color: #fff;
     font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
@@ -388,7 +388,7 @@
   .idea-save.saved { color: #1a5b30; background: #e7f7ed; cursor: default; }
   /* 좁은 화면 — 카드 버튼은 아이콘만 노출해 제목 폭 확보 */
   @media (max-width: 560px) {
-    .idea-top { padding-right: 82px; }
+    .idea-top { padding-right: 112px; }
     .idea-act { padding: 5px 7px; }
     .idea-act .lbl { display: none; }
   }
@@ -702,6 +702,7 @@ function render(ideas) {
       <div class="idea-actions">
         <button type="button" class="idea-act idea-copy" data-idx="${n}" title="복사" aria-label="복사"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="lbl">복사</span></button>
         <button type="button" class="idea-act idea-save" data-idx="${n}" title="저장" aria-label="저장"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="lbl">저장</span></button>
+        <button type="button" class="idea-act idea-send" data-idx="${n}" title="보고서 자판기로 보내기" aria-label="보고서 자판기로 보내기"><svg class="idea-act-ico" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M21 3 10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><span class="lbl">보고서</span></button>
       </div>
       <div class="idea-top">
         <div class="idea-num">${n + 1}</div>
@@ -966,6 +967,23 @@ resultsBody.addEventListener("click", async (e) => {
   } catch (err) {
     bankToast("저장 실패 — 잠시 후 다시 시도해주세요");
   } finally { sb.disabled = false; }
+});
+
+// 결과 카드 → 보고서 자판기로 보내기 (이벤트 위임)
+resultsBody.addEventListener("click", (e) => {
+  const sd = e.target.closest(".idea-send");
+  if (!sd) return;
+  const idea = lastIdeas[parseInt(sd.dataset.idx)];
+  if (!idea) return;
+  const strip = s => String(s == null ? "" : s).replace(/<\/?b>/g, "").trim();
+  const points = toArr(idea.content).map(strip).filter(Boolean).slice(0, 3);
+  const srcs = [...selectedSources].map(s => SRC_LABEL[s]).filter(Boolean);
+  const qs = new URLSearchParams();
+  qs.set("topic", strip(idea.title));
+  if (points.length) qs.set("points", points.join("|"));
+  if (srcs.length) qs.set("src", srcs.join(","));
+  window.open("https://report.samsungda.net/?" + qs.toString(), "_blank", "noopener");
+  bankToast("보고서 자판기로 전달했어요");
 });
 
 // 뱅크 카드 인터랙션 (이벤트 위임)
