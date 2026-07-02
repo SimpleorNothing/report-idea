@@ -153,10 +153,11 @@
     flex: none; width: 24px; height: 24px; border-radius: 7px; background: #0071e3; color: #fff;
     font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px;
   }
+  .idea-top .idea-hl { flex: 1; min-width: 0; }
   .idea-title { font-size: 15px; font-weight: 700; line-height: 1.45; }
   .idea-tag {
-    display: inline-block; font-size: 15px; font-weight: 700; color: #6e6e73; background: #f0f0f2;
-    border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; letter-spacing: .2px;
+    flex: none; align-self: flex-start; font-size: 15px; font-weight: 700; color: #6e6e73; background: #f0f0f2;
+    border-radius: 6px; padding: 2px 8px; margin-top: 1px; letter-spacing: .2px; white-space: nowrap;
   }
   /* 4필드 — 내용 / 당사 기회 / 당사 위협 / 보고서 방향 */
   .idea-content { margin-top: 12px; }
@@ -700,10 +701,10 @@ function render(ideas) {
     card.innerHTML = `
       <div class="idea-top">
         <div class="idea-num">${n + 1}</div>
-        <div>
+        <div class="idea-hl">
           <span class="idea-title">${esc(idea.title)}</span>
-          <span class="idea-tag">${TOPIC_LABEL[topic]}</span>
         </div>
+        <span class="idea-tag">${TOPIC_LABEL[topic]}</span>
       </div>
       <div class="idea-content"><div class="fl">내용</div>${bullets(idea.content)}</div>
       ${otRow}
@@ -977,11 +978,18 @@ resultsBody.addEventListener("click", (e) => {
   const idea = lastIdeas[parseInt(sd.dataset.idx)];
   if (!idea) return;
   const strip = s => String(s == null ? "" : s).replace(/<\/?b>/g, "").trim();
-  const points = toArr(idea.content).map(strip).filter(Boolean).slice(0, 3);
+  const grab = v => toArr(v).map(strip).filter(Boolean).slice(0, 3);
+  const points = grab(idea.content);
+  const opp = grab(idea.opportunity);
+  const thr = grab(idea.threat);
+  const ang = grab(idea.angle);
   const srcs = [...selectedSources].map(s => SRC_LABEL[s]).filter(Boolean);
   const qs = new URLSearchParams();
   qs.set("topic", strip(idea.title));
   if (points.length) qs.set("points", points.join("|"));
+  if (opp.length) qs.set("opp", opp.join("|"));
+  if (thr.length) qs.set("thr", thr.join("|"));
+  if (ang.length) qs.set("ang", ang.join("|"));
   if (srcs.length) qs.set("src", srcs.join(","));
   window.open("https://report.samsungda.net/?" + qs.toString(), "_blank", "noopener");
   bankToast("보고서 자판기로 전달했어요");
