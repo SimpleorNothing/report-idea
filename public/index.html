@@ -40,13 +40,14 @@
   .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .chip {
     flex: 1; min-width: 0; padding: 10px 8px; border: none; background: #e7eae6; border-radius:0;
-    cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600; color: #17222d;
+    cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600; color: #5c6b79;
     transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
     height: 40px; -webkit-tap-highlight-color: transparent;
   }
-  .chip:hover:not(.active) { background: #d3d9d6; }
-  .chip.active { background: #e4eaf0; color: #46647e; }
+  .chip:hover:not(.active) { background: #d3d9d6; color: #17222d; }
+  .chip.active { background: #46647e; color: #fff; }
   .chip .em { font-size: 15px; }
+  .chip .ic { width: 16px; height: 16px; flex: none; }
   .source-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .source-grid .chip { flex: none; }
   @media (max-width: 520px) { .source-grid { grid-template-columns: 1fr 1fr; } }
@@ -70,15 +71,16 @@
   .mode-row { display: flex; gap: 8px; }
   .mode-card {
     flex: 1; padding: 10px 8px; border: none; background: #e7eae6; border-radius:0;
-    cursor: pointer; transition: all 0.15s; font-family: inherit; color: #17222d;
+    cursor: pointer; transition: all 0.15s; font-family: inherit; color: #5c6b79;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px; line-height: 1.3; min-height: 52px;
   }
-  .mode-card:hover:not(.active) { background: #d3d9d6; }
-  .mode-card.active { background: #e4eaf0; }
+  .mode-card:hover:not(.active) { background: #d3d9d6; color: #17222d; }
+  .mode-card.active { background: #46647e; }
   .mode-name { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; }
-  .mode-card.active .mode-name { color: #46647e; }
+  .mode-card.active .mode-name { color: #fff; }
   .mode-sub { font-size: 15px; color: #7a8794; }
+  .mode-card.active .mode-sub { color: rgba(255,255,255,.82); }
 
   /* 주제 입력 */
   .topic-input {
@@ -463,9 +465,9 @@
 
     <label>② 분석 관점 <span class="sublabel">복수 선택 가능</span></label>
     <div class="chip-row" id="topicRow">
-      <button type="button" class="chip active" data-topic="consumer"><span class="em">👥</span>소비자</button>
-      <button type="button" class="chip active" data-topic="tech"><span class="em">⚙️</span>기술</button>
-      <button type="button" class="chip active" data-topic="rival"><span class="em">🎯</span>경쟁사</button>
+      <button type="button" class="chip active" data-topic="consumer"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>소비자</button>
+      <button type="button" class="chip active" data-topic="tech"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>기술</button>
+      <button type="button" class="chip active" data-topic="rival"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>경쟁사</button>
     </div>
 
     <label>③ 주제 입력 <span class="sublabel">선택</span></label>
@@ -478,7 +480,7 @@
       <button type="button" class="chip active" data-src="ci">경쟁사 전략 추적</button>
       <button type="button" class="chip active" data-src="2030">2030 미래 전망</button>
       <button type="button" class="chip active" data-src="reports">클로드 작성 워드보고서</button>
-      <button type="button" class="chip active" data-src="search">🔎 웹 검색</button>
+      <button type="button" class="chip active" data-src="search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>웹 검색</button>
     </div>
 
     <label>⑤ 생성 개수</label>
@@ -513,7 +515,6 @@
   <div class="bank" id="bankSection">
     <div class="bank-head">
       <span class="bank-title">아이디어 뱅크</span>
-      <span class="bank-wip">작업중</span>
       <span class="bank-count" id="bankCount"></span>
       <div class="bank-actions">
         <button type="button" class="bank-exp" id="bankExcel">⬇ Excel</button>
