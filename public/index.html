@@ -475,6 +475,7 @@
     <label>④ 데이터 소스 <span class="sublabel">복수 선택 가능</span></label>
     <div class="source-grid" id="sourceRow">
       <button type="button" class="chip active" data-src="mi">Market Sensing</button>
+      <button type="button" class="chip active" data-src="ci">경쟁사 전략 추적</button>
       <button type="button" class="chip active" data-src="2030">2030 미래 전망</button>
       <button type="button" class="chip active" data-src="reports">클로드 작성 워드보고서</button>
       <button type="button" class="chip active" data-src="search">🔎 웹 검색</button>
@@ -581,14 +582,14 @@
 
 <script>
 const TOPIC_LABEL = { consumer: "소비자", tech: "기술", rival: "경쟁사" };
-const SRC_LABEL = { mi:"Market Sensing", "2030":"2030 미래 전망", reports:"클로드 작성 워드보고서", search:"웹 검색" };
+const SRC_LABEL = { mi:"Market Sensing", ci:"경쟁사 전략 추적", "2030":"2030 미래 전망", reports:"클로드 작성 워드보고서", search:"웹 검색" };
 const DIR_LABEL = { sales: "매출 확대", profit: "수익성 강화" };
 
 const selectedTopics = new Set(["consumer", "tech", "rival"]);
-const selectedSources = new Set(["mi", "2030", "reports", "search"]);
+const selectedSources = new Set(["mi", "ci", "2030", "reports", "search"]);
 let ideaCount = 3;
 const selectedDirections = new Set(["sales"]);
-let lastSources = { reportSources: null, searchSources: [], miSources: [], trendSources: [] };
+let lastSources = { reportSources: null, searchSources: [], miSources: [], ciSources: [], trendSources: [] };
 let lastIdeas = [];
 let lastDirForSave = "sales";
 let citationMode = false;  // LLM이 아이디어별 인용 ID를 제공하면 true → 근거를 아이디어별로 표시
@@ -647,6 +648,7 @@ function srcPills(idea, idx) {
   const ids = (idea && Array.isArray(idea.sources)) ? idea.sources : [];
   const types = [];
   if (ids.some(id => /^M/.test(id))) types.push("mi");
+  if (ids.some(id => /^C/.test(id))) types.push("ci");
   if (ids.some(id => /^T/.test(id))) types.push("2030");
   if (ids.some(id => /^R/.test(id))) types.push("reports");
   // 웹 검색은 호출 단위라 아이디어별 분리가 불가 — 선택·인용기사 있으면 전체로 노출
@@ -758,7 +760,7 @@ form.addEventListener("submit", async (e) => {
     if (!ideas.length) throw new Error("생성된 아이디어가 없습니다. 다시 시도해주세요.");
 
     clearInterval(tick);
-    lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [], miSources: data.miSources || [], trendSources: data.trendSources || [] };
+    lastSources = { reportSources: data.reportSources || null, searchSources: data.searchSources || [], miSources: data.miSources || [], ciSources: data.ciSources || [], trendSources: data.trendSources || [] };
     lastIdeas = ideas;
     lastDirForSave = [...selectedDirections][0] || "sales";
     citationMode = ideas.some(it => Array.isArray(it.sources) && it.sources.length);
@@ -1286,6 +1288,23 @@ function openSourceModal(src, ideaIdx) {
           const tag = s.lens || "";  // 등급(긴급/주시 등)은 판단 근거가 약해 미표시 — 렌즈만
           return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
             + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
+        }).join("") + `</ul>`
+      : `<p class="srcmodal-empty">${emptyMsg}</p>`) + boardLink;
+  } else if (src === "ci") {
+    let list = lastSources.ciSources || [];
+    if (ideaIds) list = list.filter(s => ideaIds.includes(s.id));
+    const boardLink = `<a class="srcmodal-link" href="https://ci.samsungda.net" target="_blank" rel="noopener">→ 경쟁사 전략 추적 보드 열기</a>`;
+    const emptyMsg = ideaIds
+      ? `이 아이디어가 직접 인용한 경쟁사 전략 추적 증거가 없습니다.`
+      : `이번 생성에서 참고한 경쟁사 전략 추적 증거가 없습니다.`;
+    html = (list.length
+      ? (ideaIds ? `<p class="srcmodal-empty">이 아이디어가 근거로 삼은 증거 ${list.length}건입니다.</p>` : ``)
+        + `<ul class="srcmodal-list">` + list.map(s => {
+          const tag = [s.company, s.axis].filter(Boolean).join(" · ");
+          const label = s.url
+            ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
+            : esc(s.title);
+          return `<li>${label}` + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
         }).join("") + `</ul>`
       : `<p class="srcmodal-empty">${emptyMsg}</p>`) + boardLink;
   } else if (src === "2030") {
