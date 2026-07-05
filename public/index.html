@@ -880,7 +880,19 @@ async function loadBank() {
     bankData = Array.isArray(data.items) ? data.items : [];
   } catch (e) { bankData = []; }
   renderBank();
+  openBankFromHash();
 }
+
+// 뉴스레터 등 외부 링크(#<id>)로 진입 시 해당 아이디어 상세를 바로 연다.
+function openBankFromHash() {
+  const id = decodeURIComponent((location.hash || "").replace(/^#/, "")).trim();
+  if (!id || !bankData.some(r => r.id === id)) return;
+  openBankDetail(id);
+  const sel = (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/"/g, '\\"');
+  const card = bankGrid.querySelector('.bcard[data-id="' + sel + '"]');
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+window.addEventListener("hashchange", openBankFromHash);
 
 function renderBank() {
   armedCard = null;
