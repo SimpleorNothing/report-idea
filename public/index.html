@@ -383,8 +383,8 @@
 
   /* 결과 카드 → 뱅크 저장 버튼 */
   .idea-card { position: relative; }
-  .idea-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  .idea-foot .src-foot { margin-top: 0; }
+  .idea-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .idea-foot .src-foot { margin-top: 0; margin-right: auto; }
   .idea-actions { display: flex; gap: 5px; justify-content: flex-end; }
   .idea-act { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: #46647e; background: #e4eaf0; border: none; border-radius:0; padding: 5px 8px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: .15s; }
   .idea-act:hover { background: #dce4ec; }
@@ -593,7 +593,7 @@ const selectedDirections = new Set(["sales"]);
 let lastSources = { reportSources: null, searchSources: [], miSources: [], ciSources: [], trendSources: [] };
 let lastIdeas = [];
 let lastDirForSave = "sales";
-let citationMode = false;  // LLM이 아이디어별 인용 ID를 제공하면 true → 근거를 아이디어별로 표시
+let citationMode = false;
 
 document.querySelectorAll("#topicRow .chip").forEach(chip => {
   chip.addEventListener("click", () => {
@@ -652,15 +652,12 @@ function srcPills(idea, idx) {
   if (ids.some(id => /^C/.test(id))) types.push("ci");
   if (ids.some(id => /^T/.test(id))) types.push("2030");
   if (ids.some(id => /^R/.test(id))) types.push("reports");
-  // 웹 검색은 호출 단위라 아이디어별 분리가 불가 — 선택·인용기사 있으면 전체로 노출
   if (selectedSources.has("search") && (lastSources.searchSources || []).length) types.push("search");
   if (!types.length) return `<span class="pill pill-none">직접 인용한 소스 없음</span>`;
   return types.map(s => pillTag(s, idx)).join("");
 }
 function esc(str){ return String(str==null?"":str).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-function inline(str){ // <b>만 허용
-  return esc(str).replace(/&lt;b&gt;/g,"<b>").replace(/&lt;\/b&gt;/g,"</b>");
-}
+function inline(str){ return esc(str).replace(/&lt;b&gt;/g,"<b>").replace(/&lt;\/b&gt;/g,"</b>"); }
 function toArr(v){ return Array.isArray(v) ? v : (v == null || v === "" ? [] : [v]); }
 function bullets(v){
   const arr = toArr(v).map(s => String(s == null ? "" : s).trim()).filter(Boolean).slice(0, 3);
@@ -854,7 +851,6 @@ setInterval(() => {
   setTimeout(() => { fi = (fi+1) % footerMessages.length; footerEl.textContent = footerMessages[fi]; footerEl.classList.remove("fade"); }, 600);
 }, 6000);
 
-// ===== 아이디어 뱅크 =====
 let bankData = [];
 let bankFilter = "all";
 const bankGrid = document.getElementById("bankGrid");
@@ -883,7 +879,6 @@ async function loadBank() {
   openBankFromHash();
 }
 
-// 뉴스레터 등 외부 링크(#<id>)로 진입 시 해당 아이디어 상세를 바로 연다.
 function openBankFromHash() {
   const id = decodeURIComponent((location.hash || "").replace(/^#/, "")).trim();
   if (!id || !bankData.some(r => r.id === id)) return;
@@ -913,7 +908,7 @@ function renderBank() {
     bankEmpty.classList.remove("hide");
     bankEmpty.innerHTML = bankData.length
       ? "<b>결과가 없습니다</b>검색어나 필터를 바꿔보세요."
-      : "<b>아직 저장된 아이디어가 없습니다</b>위 자판기에서 아이디어를 뽑고 ‘🔖 저장’을 눌러보세요.";
+      : "<b>아직 저장된 아이디어가 없습니다</b>위 자판기에서 아이디어를 뽑고 '🔖 저장'을 눌러보세요.";
     return;
   }
   bankEmpty.classList.add("hide");
@@ -944,7 +939,6 @@ function renderBank() {
   }).join("");
 }
 
-// 결과 카드 → 복사 (이벤트 위임)
 resultsBody.addEventListener("click", (e) => {
   const cp = e.target.closest(".idea-copy");
   if (!cp) return;
@@ -959,7 +953,6 @@ resultsBody.addEventListener("click", (e) => {
   });
 });
 
-// 결과 카드 → 저장 (이벤트 위임)
 resultsBody.addEventListener("click", async (e) => {
   const sb = e.target.closest(".idea-save");
   if (!sb || sb.classList.contains("saved")) return;
@@ -986,7 +979,6 @@ resultsBody.addEventListener("click", async (e) => {
   } finally { sb.disabled = false; }
 });
 
-// 결과 카드 → 보고서 자판기로 보내기 (이벤트 위임)
 resultsBody.addEventListener("click", (e) => {
   const sd = e.target.closest(".idea-send");
   if (!sd) return;
@@ -1010,15 +1002,12 @@ resultsBody.addEventListener("click", (e) => {
   bankToast("보고서 자판기로 전달했어요");
 });
 
-// 뱅크 카드 인터랙션 (이벤트 위임)
-// 삭제(×) 버튼은 카드를 "길게 눌러야" 노출 — hover 오노출로 인한 오클릭 방지
 let armedCard = null, lpTimer = null, lpXY = null, lpJustFired = false;
 const LP_MS = 450, LP_MOVE = 10;
 function disarmCard() { if (armedCard) { armedCard.classList.remove("armed"); armedCard = null; } }
 function cancelLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
 bankGrid.addEventListener("pointerdown", (e) => {
   lpJustFired = false;
-  // 별표·태그·메모 등 인터랙션 요소 위에서는 길게누르기 시작 안 함
   if (e.target.closest("[data-act], textarea, a")) return;
   const card = e.target.closest(".bcard");
   if (!card) return;
@@ -1037,13 +1026,11 @@ bankGrid.addEventListener("pointermove", (e) => {
 bankGrid.addEventListener("pointerup", cancelLongPress);
 bankGrid.addEventListener("pointercancel", cancelLongPress);
 bankGrid.addEventListener("pointerleave", cancelLongPress);
-// 노출된 카드 밖을 누르면 삭제 버튼 다시 숨김
 document.addEventListener("pointerdown", (e) => {
   if (armedCard && !armedCard.contains(e.target)) disarmCard();
 });
 
 bankGrid.addEventListener("click", async (e) => {
-  // 길게눌러 삭제 버튼을 띄운 직후의 클릭은 상세 열기로 이어지지 않게 무시
   if (lpJustFired && !e.target.closest("[data-act]")) { lpJustFired = false; return; }
   const t = e.target.closest("[data-act]");
   if (!t) {
@@ -1098,7 +1085,6 @@ async function bankPut(id, patch) {
   } catch { bankToast("수정 실패"); renderBank(); }
 }
 
-// 뱅크 카드 → 저장 당시 전체 내용 상세 모달
 const bankModal = document.getElementById("bankModal");
 let bankModalCurrent = null;
 function openBankDetail(id) {
@@ -1138,7 +1124,6 @@ function closeBankDetail() {
 document.getElementById("bankModalClose").addEventListener("click", closeBankDetail);
 bankModal.addEventListener("click", (e) => { if (e.target === bankModal) closeBankDetail(); });
 
-// 상세 모달 내용 복사
 function bankIdeaToText(x) {
   const sect = (label, arr) => {
     const a = (arr || []).map(s => String(s == null ? "" : s).trim()).filter(Boolean);
@@ -1174,7 +1159,6 @@ document.getElementById("bankFilters").addEventListener("click", (e) => {
   c.classList.add("on"); renderBank();
 });
 
-// 내보내기
 function bankDownload(blob, name) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = name; a.click();
@@ -1221,7 +1205,6 @@ loadBank();
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const setOpen = o => { panel.classList.toggle("open", o); btn.setAttribute("aria-expanded", String(o)); };
 
-  // changelog.json 부재 시 기존 배포 시각(/api/version)으로 폴백
   const fallback = () => fetch("/api/version").then(r => r.json())
     .then(d => { if (d && d.version) btn.textContent = "update : " + d.version; })
     .catch(() => {});
@@ -1231,7 +1214,7 @@ loadBank();
     .then(d => {
       const e = (d && d.entries) || [];
       if (!e.length) { fallback(); return; }
-      btn.textContent = "update : " + dot(e[0].date);  // 배지엔 최신 연월일만
+      btn.textContent = "update : " + dot(e[0].date);
       if (count) count.textContent = "전체 " + e.length + "개";
       list.innerHTML = e.map(c =>
         '<li><div class="vb-time">' + dot(c.date) + "</div>" +
@@ -1243,13 +1226,11 @@ loadBank();
     .catch(() => fallback());
 })();
 
-// ===== 근거 출처 모달 =====
 const srcModal = document.getElementById("srcModal");
 const srcModalTitle = document.getElementById("srcModalTitle");
 const srcModalBody = document.getElementById("srcModalBody");
 
 function openSourceModal(src, ideaIdx) {
-  // citationMode + 유효 아이디어일 때만 아이디어별 인용 ID로 필터
   const idea = (citationMode && ideaIdx != null && lastIdeas[ideaIdx]) ? lastIdeas[ideaIdx] : null;
   const ideaIds = idea && Array.isArray(idea.sources) ? idea.sources : null;
   const titleSuffix = idea ? ` · ${esc(idea.title).slice(0, 24)}…` : "";
@@ -1298,7 +1279,7 @@ function openSourceModal(src, ideaIdx) {
     html = (list.length
       ? (ideaIds ? `<p class="srcmodal-empty">이 아이디어가 근거로 삼은 신호 ${list.length}건입니다.</p>` : ``)
         + `<ul class="srcmodal-list">` + list.map(s => {
-          const tag = s.lens || "";  // 등급(긴급/주시 등)은 판단 근거가 약해 미표시 — 렌즈만
+          const tag = s.lens || "";
           return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
             + (tag ? ` <span class="srcmodal-badge">${esc(tag)}</span>` : "") + `</li>`;
         }).join("") + `</ul>`
