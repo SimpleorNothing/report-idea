@@ -230,27 +230,13 @@ ${detailRule}`;
     reqBody.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }];
   }
 
-  let apiRes;
-  try {
-    apiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(reqBody),
-    });
-  } catch (e) {
-    return json({ error: "Claude API 호출 실패: " + e.message }, 502);
+  // 일시적 게이트웨이 장애(502/503/504/529)·429·네트워크 오류는 지수 백오프로 재시도
+  const call = await callAnthropicWithRetry(reqBody, env);
+  if (!call.ok) {
+    return json({ error: call.error }, 502);
   }
 
-  if (!apiRes.ok) {
-    const errTxt = await apiRes.text();
-    return json({ error: `Claude API 오류 (${apiRes.status}): ${errTxt.slice(0, 500)}` }, 502);
-  }
-
-  const data = await apiRes.json();
+  const data = await call.res.json();
   const fullText = (data.content || [])
     .filter(b => b.type === "text")
     .map(b => b.text)
@@ -689,6 +675,47 @@ function collectSearchSources(content) {
   }
   return out;
 }
+
+// ===== Anthropic API 호출 (지수 백오프 재시도) =====
+// api.anthropic.com 앞단 게이트웨이의 일시적 502/503/504, 과부하 529, 429, 네트워크 오류는
+// 대부분 재시도로 해소된다("error code: 502"는 origin 앞단 CF 엣지 일시 장애 형식).
+// 4xx(인증·요청 오류 등)는 재시도해도 동일하므로 즉시 반환한다.
+async function callAnthropicWithRetry(reqBody, env, { retries = 2 } = {}) {
+  const RETRIABLE = new Set([408, 425, 429, 500, 502, 503, 504, 529]);
+  let last = "Claude API 호출 실패";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let res;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": env.ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(reqBody),
+      });
+    } catch (e) {
+      last = "Claude API 호출 실패: " + e.message;
+      if (attempt < retries) { await sleep(backoffMs(attempt)); continue; }
+      return { ok: false, status: 502, error: last };
+    }
+
+    if (res.ok) return { ok: true, res };
+
+    const errTxt = await res.text().catch(() => "");
+    last = `Claude API 오류 (${res.status}): ${errTxt.slice(0, 500)}`;
+    if (RETRIABLE.has(res.status) && attempt < retries) { await sleep(backoffMs(attempt)); continue; }
+    return { ok: false, status: res.status, error: last };
+  }
+  return { ok: false, status: 502, error: last };
+}
+
+// 지수 백오프 + 지터: 0.6s, 1.2s … (상한 6s)
+function backoffMs(attempt) {
+  return Math.min(6000, 600 * Math.pow(2, attempt)) + Math.floor(Math.random() * 400);
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // 잘린 JSON 문자열에서 최상위 완성 객체({...})만 순차 복구한다.
 // max_tokens로 배열이 중간에 끊겨도 이미 완성된 앞쪽 아이디어는 살릴 수 있다.
