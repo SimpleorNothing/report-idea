@@ -160,3 +160,10 @@ export async function guard(request, env, url, options = {}) {
 
   return loginPage(title, url.pathname + (url.search || ""), false);
 }
+
+// 서버-측(Worker → Worker) 호출용 세션 쿠키 문자열.
+// 브라우저 쿠키 없이 내부 도구(2030·MI·CI 등)를 부를 때, 포탈과 동일한 파생 토큰으로
+// 인증한다. 비밀번호가 바뀌면 토큰도 함께 바뀌므로 별도 관리 대상이 없다.
+export async function internalSessionCookie(env) {
+  return AUTH_COOKIE + "=" + (await sessionToken(env));
+}
