@@ -11,9 +11,6 @@
     // (false/부분 지정이면 Cloudflare가 public/index.html을 Worker보다 먼저 서빙 → 게이트 우회)
     "run_worker_first": true
   },
-  "version_metadata": {
-    "binding": "CF_VERSION_METADATA"
-  },
   "r2_buckets": [
     { "binding": "RESEARCH", "bucket_name": "samsungda-research" }
   ],
